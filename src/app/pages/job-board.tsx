@@ -1,112 +1,50 @@
 import { Navbar } from "../components/navbar";
-import { Search, Plus, MapPin, Clock, Users, ChevronRight, Briefcase, DollarSign, X } from "lucide-react";
-import { useState } from "react";
+import {
+  Search, Plus, MapPin, Clock, Users, ChevronRight, Briefcase, DollarSign, X,
+  Palette, Code2, PenLine, Camera, Megaphone, LayoutGrid, FileText,
+} from "lucide-react";
+import { useState, useEffect } from "react";
+import { getGigs, addGig, type Gig } from "../../lib/firestore";
+import { useAuth } from "../../lib/auth-context";
 
-const gigsData = [
-  {
-    id: 1,
-    title: "Logo Design for Coffee Shop",
-    company: "Local Coffee Co.",
-    description: "Looking for a creative designer to create a modern, minimalist logo for our new coffee shop. Must include brand colors and multiple format deliverables.",
-    budget: "$500",
-    applicants: 12,
-    postedDate: "2 days ago",
-    location: "Remote",
-    category: "Design",
-    skills: ["Logo Design", "Branding", "Adobe Illustrator"],
-    emoji: "🎨",
-    iconBg: "from-pink-400 to-rose-500",
-    categoryColor: "bg-pink-100 text-pink-600",
-  },
-  {
-    id: 2,
-    title: "Website Development — E-commerce",
-    company: "Fashion Boutique",
-    description: "Need a full-stack developer to build an e-commerce website with payment integration, product catalog, and admin panel.",
-    budget: "$2,500",
-    applicants: 8,
-    postedDate: "1 week ago",
-    location: "Hybrid",
-    category: "Dev",
-    skills: ["React", "Node.js", "E-commerce"],
-    emoji: "💻",
-    iconBg: "from-violet-400 to-purple-500",
-    categoryColor: "bg-violet-100 text-violet-600",
-  },
-  {
-    id: 3,
-    title: "Social Media Content Creation",
-    company: "Tech Startup",
-    description: "Seeking a creative content creator to produce engaging social media posts, reels, and stories. Must have experience with Instagram and TikTok.",
-    budget: "$800/mo",
-    applicants: 15,
-    postedDate: "3 days ago",
-    location: "Remote",
-    category: "Marketing",
-    skills: ["Content Creation", "Social Media", "Video Editing"],
-    emoji: "📣",
-    iconBg: "from-orange-400 to-red-500",
-    categoryColor: "bg-orange-100 text-orange-600",
-  },
-  {
-    id: 4,
-    title: "Mobile App UI/UX Design",
-    company: "Fitness App Co.",
-    description: "Looking for an experienced UI/UX designer to redesign our fitness tracking app. Need wireframes, mockups, and interactive prototypes.",
-    budget: "$1,200",
-    applicants: 20,
-    postedDate: "5 days ago",
-    location: "Remote",
-    category: "Design",
-    skills: ["UI/UX", "Figma", "Mobile Design"],
-    emoji: "✏️",
-    iconBg: "from-pink-400 to-rose-500",
-    categoryColor: "bg-pink-100 text-pink-600",
-  },
-  {
-    id: 5,
-    title: "Event Photography Coverage",
-    company: "Alumni Association",
-    description: "Need a skilled photographer for our annual alumni reunion event. Includes candid shots, group photos, and event coverage.",
-    budget: "$400",
-    applicants: 6,
-    postedDate: "1 day ago",
-    location: "On Campus",
-    category: "Photo",
-    skills: ["Photography", "Photo Editing", "Lightroom"],
-    emoji: "📸",
-    iconBg: "from-sky-400 to-blue-500",
-    categoryColor: "bg-sky-100 text-sky-600",
-  },
-  {
-    id: 6,
-    title: "Tech Blog Writing — 5 Articles/Month",
-    company: "Tech Review Blog",
-    description: "Seeking tech-savvy writers to create in-depth reviews and articles about the latest gadgets and software. 1000+ words each.",
-    budget: "$600/mo",
-    applicants: 18,
-    postedDate: "4 days ago",
-    location: "Remote",
-    category: "Writing",
-    skills: ["Technical Writing", "SEO", "Research"],
-    emoji: "✍️",
-    iconBg: "from-amber-400 to-orange-500",
-    categoryColor: "bg-amber-100 text-amber-600",
-  },
-];
+const categoryIconMap: Record<string, React.ElementType> = {
+  Design: Palette,
+  Dev: Code2,
+  Writing: PenLine,
+  Photo: Camera,
+  Marketing: Megaphone,
+  All: LayoutGrid,
+};
+
+const categoryColorMap: Record<string, string> = {
+  Design: "from-pink-400 to-rose-500",
+  Dev: "from-violet-400 to-purple-500",
+  Writing: "from-amber-400 to-orange-500",
+  Photo: "from-sky-400 to-blue-500",
+  Marketing: "from-orange-400 to-red-500",
+  All: "from-[#38B6FF] to-[#1a9fe8]",
+};
+
+const categoryBadgeMap: Record<string, string> = {
+  Design: "bg-pink-100 text-pink-600",
+  Dev: "bg-violet-100 text-violet-600",
+  Writing: "bg-amber-100 text-amber-600",
+  Photo: "bg-sky-100 text-sky-600",
+  Marketing: "bg-orange-100 text-orange-600",
+};
 
 const categories = [
-  { label: "All", emoji: "✨" },
-  { label: "Design", emoji: "🎨" },
-  { label: "Dev", emoji: "💻" },
-  { label: "Marketing", emoji: "📣" },
-  { label: "Photo", emoji: "📸" },
-  { label: "Writing", emoji: "✍️" },
+  { label: "All", Icon: LayoutGrid },
+  { label: "Design", Icon: Palette },
+  { label: "Dev", Icon: Code2 },
+  { label: "Marketing", Icon: Megaphone },
+  { label: "Photo", Icon: Camera },
+  { label: "Writing", Icon: PenLine },
 ];
 
-type Gig = typeof gigsData[0];
-
 function GigDetailModal({ gig, onClose }: { gig: Gig; onClose: () => void }) {
+  const Icon = categoryIconMap[gig.category] || Briefcase;
+  const color = categoryColorMap[gig.category] || "from-[#38B6FF] to-[#1a9fe8]";
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
@@ -114,21 +52,21 @@ function GigDetailModal({ gig, onClose }: { gig: Gig; onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
         style={{ fontFamily: "'Nunito', sans-serif" }}
       >
-        {/* Header */}
-        <div className={`bg-gradient-to-br ${gig.iconBg} p-7 rounded-t-3xl relative`}>
+        <div className={`bg-gradient-to-br ${color} p-7 rounded-t-3xl relative`}>
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/25 flex items-center justify-center text-white hover:bg-white/40 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
-          <div className="text-4xl mb-3">{gig.emoji}</div>
+          <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center mb-3">
+            <Icon className="w-7 h-7 text-white" />
+          </div>
           <h2 className="text-white text-xl leading-tight" style={{ fontWeight: 800 }}>{gig.title}</h2>
           <p className="text-white/80 text-sm mt-1" style={{ fontWeight: 500 }}>{gig.company}</p>
         </div>
 
         <div className="p-7 space-y-5">
-          {/* Meta */}
           <div className="grid grid-cols-2 gap-3">
             {[
               { icon: <DollarSign className="w-4 h-4" />, label: "Budget", value: gig.budget, color: "text-[#38B6FF]" },
@@ -146,25 +84,21 @@ function GigDetailModal({ gig, onClose }: { gig: Gig; onClose: () => void }) {
             ))}
           </div>
 
-          {/* Description */}
           <div>
             <p className="text-xs text-[#6b7a8d] mb-2" style={{ fontWeight: 700 }}>DESCRIPTION</p>
             <p className="text-[#1A1D20] text-sm leading-relaxed" style={{ fontWeight: 500 }}>{gig.description}</p>
           </div>
 
-          {/* Skills */}
           <div>
             <p className="text-xs text-[#6b7a8d] mb-2" style={{ fontWeight: 700 }}>SKILLS REQUIRED</p>
             <div className="flex flex-wrap gap-2">
               {gig.skills.map((skill) => (
-                <span key={skill} className="bg-[#EFF8FF] text-[#38B6FF] text-xs px-3 py-1.5 rounded-full" style={{ fontWeight: 600 }}>
-                  {skill}
-                </span>
+                <span key={skill} className="bg-[#EFF8FF] text-[#38B6FF] text-xs px-3 py-1.5 rounded-full" style={{ fontWeight: 600 }}>{skill}</span>
               ))}
             </div>
           </div>
 
-          <button className="w-full bg-gradient-to-r from-[#38B6FF] to-[#1a9fe8] text-white py-4 rounded-2xl shadow-lg shadow-[#38B6FF]/30 hover:shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ fontWeight: 700 }}>
+          <button className="w-full bg-[#FFC107] text-[#1A1D20] py-4 rounded-2xl shadow-lg shadow-[#FFC107]/25 hover:bg-[#FFD000] transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ fontWeight: 700 }}>
             Apply for This Gig
           </button>
         </div>
@@ -174,12 +108,21 @@ function GigDetailModal({ gig, onClose }: { gig: Gig; onClose: () => void }) {
 }
 
 export function JobBoard() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
   const [showPostForm, setShowPostForm] = useState(false);
+  const [gigs, setGigs] = useState<Gig[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [posting, setPosting] = useState(false);
+  const [form, setForm] = useState({ title: "", company: "", budget: "", description: "", category: "Design", location: "Remote" });
 
-  const filteredGigs = gigsData.filter((gig) => {
+  useEffect(() => {
+    getGigs().then((data) => { setGigs(data); setLoading(false); });
+  }, []);
+
+  const filteredGigs = gigs.filter((gig) => {
     const matchesSearch =
       gig.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       gig.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -188,22 +131,38 @@ export function JobBoard() {
     return matchesSearch && matchesCategory;
   });
 
+  const handlePostGig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPosting(true);
+    try {
+      const newGig: Omit<Gig, "id"> = {
+        ...form,
+        skills: [],
+        applicants: 0,
+        postedDate: "Just now",
+        postedBy: user?.uid,
+      };
+      const ref = await addGig(newGig);
+      setGigs((prev) => [{ id: ref.id, ...newGig }, ...prev]);
+      setShowPostForm(false);
+      setForm({ title: "", company: "", budget: "", description: "", category: "Design", location: "Remote" });
+    } finally {
+      setPosting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#EFF8FF]" style={{ fontFamily: "'Nunito', sans-serif" }}>
       <Navbar />
 
-      {/* Header banner */}
+      {/* Header */}
       <div className="bg-gradient-to-br from-[#38B6FF] via-[#60c8ff] to-[#a8e0ff] relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.25)_0%,_transparent_60%)]" />
         <div className="relative max-w-6xl mx-auto px-6 py-12">
-          <h1 className="text-white text-4xl mb-2" style={{ fontWeight: 900 }}>
-            Find Your Next Gig
-          </h1>
+          <h1 className="text-white text-4xl mb-2" style={{ fontWeight: 900 }}>Find Your Next Gig</h1>
           <p className="text-white/80 mb-7" style={{ fontWeight: 500 }}>
-            Real opportunities from local businesses · {gigsData.length} active listings
+            Real opportunities from local businesses · {gigs.length} active listings
           </p>
-
-          {/* Search bar */}
           <div className="flex gap-3 bg-white rounded-2xl p-2 shadow-2xl shadow-[#38B6FF]/20 max-w-xl">
             <div className="flex-1 flex items-center gap-3 px-3">
               <Search className="w-5 h-5 text-[#6b7a8d] shrink-0" />
@@ -226,7 +185,6 @@ export function JobBoard() {
             </button>
           </div>
         </div>
-        {/* Wave */}
         <div className="absolute bottom-0 left-0 right-0">
           <svg viewBox="0 0 1440 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
             <path d="M0 40L1440 40L1440 20C1200 40 960 0 720 15C480 30 240 5 0 20L0 40Z" fill="#EFF8FF" />
@@ -235,16 +193,16 @@ export function JobBoard() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
-        {/* Stats row */}
+        {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
-            { icon: <Briefcase className="w-5 h-5" />, value: gigsData.length.toString(), label: "Active Gigs", color: "from-[#38B6FF] to-[#1a9fe8]" },
-            { icon: <Users className="w-5 h-5" />, value: "2,547", label: "Students", color: "from-violet-400 to-purple-500" },
-            { icon: <DollarSign className="w-5 h-5" />, value: "$45K+", label: "Paid Out", color: "from-emerald-400 to-teal-500" },
+            { Icon: Briefcase, value: gigs.length.toString(), label: "Active Gigs", color: "from-[#38B6FF] to-[#1a9fe8]" },
+            { Icon: Users, value: "2,547", label: "Students", color: "from-violet-400 to-purple-500" },
+            { Icon: DollarSign, value: "$45K+", label: "Paid Out", color: "from-emerald-400 to-teal-500" },
           ].map((stat) => (
             <div key={stat.label} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3">
               <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-white shadow-md`}>
-                {stat.icon}
+                <stat.Icon className="w-5 h-5" />
               </div>
               <div>
                 <p className="text-[#1A1D20]" style={{ fontWeight: 800 }}>{stat.value}</p>
@@ -256,69 +214,88 @@ export function JobBoard() {
 
         {/* Category filters */}
         <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
-          {categories.map((cat) => (
+          {categories.map(({ label, Icon }) => (
             <button
-              key={cat.label}
-              onClick={() => setSelectedCategory(cat.label)}
+              key={label}
+              onClick={() => setSelectedCategory(label)}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-full whitespace-nowrap transition-all ${
-                selectedCategory === cat.label
+                selectedCategory === label
                   ? "bg-[#38B6FF] text-white shadow-lg shadow-[#38B6FF]/30"
                   : "bg-white text-[#6b7a8d] hover:bg-[#daeeff] hover:text-[#1A1D20]"
               }`}
               style={{ fontWeight: 600 }}
             >
-              <span>{cat.emoji}</span>
-              <span className="text-sm">{cat.label}</span>
+              <Icon className="w-4 h-4" />
+              <span className="text-sm">{label}</span>
             </button>
           ))}
         </div>
 
-        {/* Results count */}
         <p className="text-[#6b7a8d] text-sm mb-4" style={{ fontWeight: 600 }}>
           {filteredGigs.length} gig{filteredGigs.length !== 1 ? "s" : ""} found
         </p>
 
-        {/* Gig list — app-listing style inspired by the reference */}
-        <div className="space-y-3">
-          {filteredGigs.map((gig) => (
-            <button
-              key={gig.id}
-              onClick={() => setSelectedGig(gig)}
-              className="w-full flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm hover:shadow-md hover:shadow-[#38B6FF]/10 transition-all group hover:-translate-y-0.5 text-left"
-            >
-              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${gig.iconBg} flex items-center justify-center text-2xl shadow-md flex-shrink-0`}>
-                {gig.emoji}
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="text-[#1A1D20] truncate" style={{ fontWeight: 700 }}>{gig.title}</h3>
-                  <span className="text-[#1A1D20] flex-shrink-0" style={{ fontWeight: 800 }}>{gig.budget}</span>
-                </div>
-                <p className="text-[#6b7a8d] text-sm mb-2" style={{ fontWeight: 500 }}>{gig.company}</p>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <span className={`text-xs px-2.5 py-1 rounded-full ${gig.categoryColor}`} style={{ fontWeight: 600 }}>
-                    {gig.emoji} {gig.category}
-                  </span>
-                  <span className="text-xs text-[#6b7a8d] flex items-center gap-1" style={{ fontWeight: 500 }}>
-                    <MapPin className="w-3 h-3" /> {gig.location}
-                  </span>
-                  <span className="text-xs text-[#6b7a8d] flex items-center gap-1" style={{ fontWeight: 500 }}>
-                    <Clock className="w-3 h-3" /> {gig.postedDate}
-                  </span>
-                  <span className="text-xs text-[#6b7a8d]" style={{ fontWeight: 500 }}>{gig.applicants} applicants</span>
+        {/* Gig list */}
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white rounded-2xl p-4 h-24 animate-pulse flex gap-4 items-center">
+                <div className="w-14 h-14 rounded-2xl bg-[#EFF8FF] flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-[#EFF8FF] rounded w-2/3" />
+                  <div className="h-3 bg-[#EFF8FF] rounded w-1/3" />
                 </div>
               </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredGigs.map((gig) => {
+              const Icon = categoryIconMap[gig.category] || Briefcase;
+              const color = categoryColorMap[gig.category] || "from-[#38B6FF] to-[#1a9fe8]";
+              const badgeColor = categoryBadgeMap[gig.category] || "bg-[#EFF8FF] text-[#38B6FF]";
+              return (
+                <button
+                  key={gig.id}
+                  onClick={() => setSelectedGig(gig)}
+                  className="w-full flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm hover:shadow-md hover:shadow-[#38B6FF]/10 transition-all group hover:-translate-y-0.5 text-left"
+                >
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${color} flex items-center justify-center shadow-md flex-shrink-0`}>
+                    <Icon className="w-7 h-7 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-[#1A1D20] truncate" style={{ fontWeight: 700 }}>{gig.title}</h3>
+                      <span className="text-[#1A1D20] flex-shrink-0" style={{ fontWeight: 800 }}>{gig.budget}</span>
+                    </div>
+                    <p className="text-[#6b7a8d] text-sm mb-2" style={{ fontWeight: 500 }}>{gig.company}</p>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className={`text-xs px-2.5 py-1 rounded-full ${badgeColor}`} style={{ fontWeight: 600 }}>
+                        {gig.category}
+                      </span>
+                      <span className="text-xs text-[#6b7a8d] flex items-center gap-1" style={{ fontWeight: 500 }}>
+                        <MapPin className="w-3 h-3" /> {gig.location}
+                      </span>
+                      <span className="text-xs text-[#6b7a8d] flex items-center gap-1" style={{ fontWeight: 500 }}>
+                        <Clock className="w-3 h-3" /> {gig.postedDate}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0 flex flex-col items-end gap-2">
+                    <span className="text-xs bg-[#FFC107] text-[#1A1D20] px-3 py-1.5 rounded-full" style={{ fontWeight: 700 }}>View Now</span>
+                    <ChevronRight className="w-4 h-4 text-[#38B6FF] group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-              <ChevronRight className="w-5 h-5 text-[#38B6FF] flex-shrink-0 group-hover:translate-x-1 transition-transform" />
-            </button>
-          ))}
-        </div>
-
-        {/* Empty state */}
-        {filteredGigs.length === 0 && (
+        {!loading && filteredGigs.length === 0 && (
           <div className="bg-white rounded-3xl p-14 text-center shadow-sm">
-            <div className="text-5xl mb-4">🔍</div>
+            <div className="w-16 h-16 rounded-2xl bg-[#EFF8FF] flex items-center justify-center mx-auto mb-4">
+              <Search className="w-8 h-8 text-[#38B6FF]" />
+            </div>
             <h3 className="text-[#1A1D20] text-lg mb-2" style={{ fontWeight: 800 }}>No gigs found</h3>
             <p className="text-[#6b7a8d] text-sm" style={{ fontWeight: 500 }}>Try adjusting your search or category filters</p>
           </div>
@@ -341,12 +318,9 @@ export function JobBoard() {
         </div>
       </div>
 
-      {/* Gig detail modal */}
-      {selectedGig && (
-        <GigDetailModal gig={selectedGig} onClose={() => setSelectedGig(null)} />
-      )}
+      {selectedGig && <GigDetailModal gig={selectedGig} onClose={() => setSelectedGig(null)} />}
 
-      {/* Post gig modal */}
+      {/* Post Gig Modal */}
       {showPostForm && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowPostForm(false)}>
           <div
@@ -361,39 +335,65 @@ export function JobBoard() {
               >
                 <X className="w-4 h-4" />
               </button>
-              <div className="text-4xl mb-3">📋</div>
+              <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mb-3">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
               <h2 className="text-white text-xl" style={{ fontWeight: 800 }}>Post a Gig</h2>
               <p className="text-white/80 text-sm" style={{ fontWeight: 500 }}>Connect with campus talent</p>
             </div>
-            <div className="p-7 space-y-4">
+            <form onSubmit={handlePostGig} className="p-7 space-y-4">
               {[
-                { label: "Gig Title", placeholder: "e.g. Logo Design for Restaurant" },
-                { label: "Your Company / Name", placeholder: "e.g. Local Coffee Co." },
-                { label: "Budget", placeholder: "e.g. $500 or $200/month" },
+                { key: "title", label: "Gig Title", placeholder: "e.g. Logo Design for Restaurant" },
+                { key: "company", label: "Your Company / Name", placeholder: "e.g. Local Coffee Co." },
+                { key: "budget", label: "Budget", placeholder: "e.g. $500 or $200/month" },
               ].map((field) => (
-                <div key={field.label}>
+                <div key={field.key}>
                   <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>{field.label.toUpperCase()}</label>
                   <input
                     type="text"
                     placeholder={field.placeholder}
+                    value={(form as any)[field.key]}
+                    onChange={(e) => setForm((f) => ({ ...f, [field.key]: e.target.value }))}
+                    required
                     className="w-full bg-[#EFF8FF] rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d]"
                     style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}
                   />
                 </div>
               ))}
               <div>
+                <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>CATEGORY</label>
+                <select
+                  value={form.category}
+                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                  className="w-full bg-[#EFF8FF] rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20]"
+                  style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}
+                >
+                  {["Design", "Dev", "Marketing", "Photo", "Writing", "Music", "Video"].map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>DESCRIPTION</label>
                 <textarea
                   placeholder="Describe the gig requirements..."
                   rows={3}
+                  value={form.description}
+                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  required
                   className="w-full bg-[#EFF8FF] rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d] resize-none"
                   style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}
                 />
               </div>
-              <button className="w-full bg-gradient-to-r from-[#38B6FF] to-[#1a9fe8] text-white py-4 rounded-2xl shadow-lg shadow-[#38B6FF]/30 hover:shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ fontWeight: 700 }}>
-                Submit Gig Listing
+              <button
+                type="submit"
+                disabled={posting}
+                className="w-full bg-gradient-to-r from-[#38B6FF] to-[#1a9fe8] text-white py-4 rounded-2xl shadow-lg shadow-[#38B6FF]/30 hover:shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
+                style={{ fontWeight: 700 }}
+              >
+                {posting ? "Posting…" : "Submit Gig Listing"}
               </button>
-            </div>
+            </form>
           </div>
         </div>
       )}
