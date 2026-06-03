@@ -1,8 +1,9 @@
 import {
   collection, doc, getDocs, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
-  query, orderBy, limit, serverTimestamp, Timestamp,
+  query, where,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from './firebase';
 
 export interface Gig {
   id?: string;
@@ -16,6 +17,7 @@ export interface Gig {
   postedDate: string;
   applicants: number;
   postedBy?: string;
+  deadline?: string;
 }
 
 export interface StudentProfile {
@@ -31,9 +33,10 @@ export interface StudentProfile {
   location: string;
   bio: string;
   skills: string[];
+  hourlyRate?: string;
   experience: { role: string; organization: string; period: string; description: string }[];
   education: { degree: string; university: string; period: string; gpa: string };
-  portfolio: { id: number; image: string; title: string }[];
+  portfolio: { id: number; image: string; title: string; url?: string }[];
   whatsappNumber: string;
   whatsappEnabled: boolean;
   reviews: { id: number; author: string; role: string; rating: number; comment: string; date: string }[];
@@ -92,6 +95,7 @@ const SEED_STUDENTS: Omit<StudentProfile, 'id'>[] = [
     email: "sarah.j@university.edu", phone: "+1 (555) 123-4567", location: "Campus Town, ST",
     bio: "Creative and passionate graphic designer with 3+ years of experience in branding, digital design, and illustration.",
     skills: ["UI/UX Design", "Branding", "Illustration", "Figma", "Adobe Suite", "Typography"],
+    hourlyRate: "$45",
     experience: [
       { role: "Freelance Graphic Designer", organization: "Various Clients", period: "2023 – Present", description: "Created brand identities, marketing materials, and digital designs for 15+ clients." },
       { role: "Design Intern", organization: "Creative Agency Inc.", period: "Summer 2024", description: "Collaborated with senior designers on client projects and brand development." },
@@ -116,6 +120,7 @@ const SEED_STUDENTS: Omit<StudentProfile, 'id'>[] = [
     email: "marcus.w@techuniv.edu", phone: "+1 (555) 234-5678", location: "Campus Town, ST",
     bio: "Full-stack developer specializing in React and Node.js. Passionate about building scalable web applications.",
     skills: ["React", "Node.js", "TypeScript", "PostgreSQL", "GraphQL"],
+    hourlyRate: "$55",
     experience: [
       { role: "Freelance Developer", organization: "Various Clients", period: "2024 – Present", description: "Built web apps and dashboards for local businesses." },
     ],
@@ -136,6 +141,7 @@ const SEED_STUDENTS: Omit<StudentProfile, 'id'>[] = [
     email: "aisha.p@biz.edu", phone: "+1 (555) 345-6789", location: "Campus Town, ST",
     bio: "Digital marketing specialist focused on content strategy, SEO, and social media growth.",
     skills: ["Content Strategy", "SEO", "Social Media", "Analytics", "Copywriting"],
+    hourlyRate: "$35",
     experience: [
       { role: "Social Media Manager", organization: "Local Restaurant Chain", period: "2025 – Present", description: "Grew Instagram following from 2K to 25K in 6 months." },
     ],
@@ -164,27 +170,19 @@ const SEED_FLAGGED: Omit<FlaggedItem, 'id'>[] = [
 export async function seedFirestore() {
   const gigsSnap = await getDocs(collection(db, 'gigs'));
   if (gigsSnap.empty) {
-    for (const gig of SEED_GIGS) {
-      await addDoc(collection(db, 'gigs'), gig);
-    }
+    for (const gig of SEED_GIGS) await addDoc(collection(db, 'gigs'), gig);
   }
   const studentsSnap = await getDocs(collection(db, 'students'));
   if (studentsSnap.empty) {
-    for (const student of SEED_STUDENTS) {
-      await addDoc(collection(db, 'students'), student);
-    }
+    for (const student of SEED_STUDENTS) await addDoc(collection(db, 'students'), student);
   }
   const verifSnap = await getDocs(collection(db, 'pendingVerifications'));
   if (verifSnap.empty) {
-    for (const v of SEED_VERIFICATIONS) {
-      await addDoc(collection(db, 'pendingVerifications'), v);
-    }
+    for (const v of SEED_VERIFICATIONS) await addDoc(collection(db, 'pendingVerifications'), v);
   }
   const flaggedSnap = await getDocs(collection(db, 'flaggedContent'));
   if (flaggedSnap.empty) {
-    for (const f of SEED_FLAGGED) {
-      await addDoc(collection(db, 'flaggedContent'), f);
-    }
+    for (const f of SEED_FLAGGED) await addDoc(collection(db, 'flaggedContent'), f);
   }
   const usersSnap = await getDocs(collection(db, 'adminUsers'));
   if (usersSnap.empty) {
@@ -195,9 +193,7 @@ export async function seedFirestore() {
       { name: "David Park", email: "david.p@university.edu", role: "Student", verificationStatus: "Rejected", joinDate: "May 2026", gigs: 0 },
       { name: "Lisa Thompson", email: "lisa.t@startup.io", role: "Client", verificationStatus: "Verified", joinDate: "Mar 2026", gigs: 7 },
     ];
-    for (const u of adminUsers) {
-      await addDoc(collection(db, 'adminUsers'), u);
-    }
+    for (const u of adminUsers) await addDoc(collection(db, 'adminUsers'), u);
   }
 }
 
@@ -219,6 +215,29 @@ export async function getStudentById(id: string): Promise<StudentProfile | null>
   const snap = await getDoc(doc(db, 'students', id));
   if (!snap.exists()) return null;
   return { id: snap.id, ...snap.data() } as StudentProfile;
+}
+
+export async function getStudentByUid(uid: string): Promise<StudentProfile | null> {
+  const q = query(collection(db, 'students'), where('uid', '==', uid));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return { id: d.id, ...d.data() } as StudentProfile;
+}
+
+export async function createStudentProfile(uid: string, data: Omit<StudentProfile, 'id' | 'uid'>): Promise<string> {
+  const ref = await addDoc(collection(db, 'students'), { ...data, uid });
+  return ref.id;
+}
+
+export async function updateStudentProfile(id: string, data: Partial<StudentProfile>) {
+  return updateDoc(doc(db, 'students', id), data as Record<string, unknown>);
+}
+
+export async function uploadProfilePhoto(uid: string, file: File): Promise<string> {
+  const storageRef = ref(storage, `profile-photos/${uid}/${file.name}`);
+  const snap = await uploadBytes(storageRef, file);
+  return getDownloadURL(snap.ref);
 }
 
 export async function getAdminUsers(): Promise<AdminUser[]> {

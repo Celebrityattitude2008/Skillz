@@ -1,8 +1,8 @@
 import { Link, useLocation, useNavigate } from "react-router";
-import { Zap, Menu, X, LogOut, User, ChevronDown, Shield } from "lucide-react";
+import { Zap, Menu, X, LogOut, User, ChevronDown, Shield, Edit } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { auth, ADMIN_EMAIL } from "../../lib/firebase";
 import { useAuth } from "../../lib/auth-context";
 
 export function Navbar() {
@@ -12,6 +12,8 @@ export function Navbar() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   const navLinks = [
     { label: "Discover", to: "/" },
@@ -71,7 +73,7 @@ export function Navbar() {
               </Link>
             );
           })}
-          {profile?.role === "admin" && (
+          {isAdmin && (
             <Link
               to="/admin"
               className={`px-4 py-2 rounded-full text-sm transition-all duration-200 flex items-center gap-1.5 ${
@@ -112,7 +114,7 @@ export function Navbar() {
                     <p className="text-[#1A1D20] text-sm truncate" style={{ fontWeight: 700 }}>{displayName}</p>
                     <p className="text-[#6b7a8d] text-xs truncate" style={{ fontWeight: 500 }}>{user.email}</p>
                   </div>
-                  {profile?.role === "admin" && (
+                  {isAdmin && (
                     <Link
                       to="/admin"
                       onClick={() => setDropdownOpen(false)}
@@ -124,13 +126,22 @@ export function Navbar() {
                     </Link>
                   )}
                   <Link
+                    to="/profile/me"
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-3 text-sm text-[#1A1D20] hover:bg-[#EFF8FF] transition-colors"
+                    style={{ fontWeight: 600 }}
+                  >
+                    <Edit className="w-4 h-4 text-[#38B6FF]" />
+                    Edit My Profile
+                  </Link>
+                  <Link
                     to="/profile/1"
                     onClick={() => setDropdownOpen(false)}
                     className="flex items-center gap-2.5 px-4 py-3 text-sm text-[#1A1D20] hover:bg-[#EFF8FF] transition-colors"
                     style={{ fontWeight: 600 }}
                   >
                     <User className="w-4 h-4 text-[#38B6FF]" />
-                    My Profile
+                    Browse Profiles
                   </Link>
                   <button
                     onClick={handleSignOut}
@@ -186,7 +197,18 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
-          {profile?.role === "admin" && (
+          {user && (
+            <Link
+              to="/profile/me"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-2 px-4 py-3 rounded-2xl text-[#1A1D20] hover:bg-[#EFF8FF] transition-colors"
+              style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}
+            >
+              <Edit className="w-4 h-4 text-[#38B6FF]" />
+              Edit My Profile
+            </Link>
+          )}
+          {isAdmin && (
             <Link
               to="/admin"
               onClick={() => setMenuOpen(false)}

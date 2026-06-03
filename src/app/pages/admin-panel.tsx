@@ -2,14 +2,17 @@ import { Navbar } from "../components/navbar";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import {
   Users, CheckCircle, XCircle, Clock, Shield, Star, Trash2, AlertTriangle,
-  Search, Loader2, RefreshCw, Database,
+  Search, Loader2, RefreshCw, Database, Lock,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Link } from "react-router";
 import {
   getAdminUsers, updateAdminUser, getPendingVerifications, deleteVerification,
   getFlaggedContent, deleteFlaggedItem, getStudents, setSpotlightStudent,
   seedFirestore, type AdminUser, type PendingVerification, type FlaggedItem, type StudentProfile,
 } from "../../lib/firestore";
+import { useAuth } from "../../lib/auth-context";
+import { ADMIN_EMAIL } from "../../lib/firebase";
 
 const statusStyle: Record<string, string> = {
   Verified: "bg-emerald-100 text-emerald-700",
@@ -24,6 +27,9 @@ const statusIcon: Record<string, React.ReactNode> = {
 };
 
 export function AdminPanel() {
+  const { user, loading: authLoading } = useAuth();
+  const isAdmin = user?.email === ADMIN_EMAIL;
+
   const [selectedTab, setSelectedTab] = useState<"users" | "verification" | "spotlight" | "moderation">("users");
   const [searchQuery, setSearchQuery] = useState("");
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -101,6 +107,39 @@ export function AdminPanel() {
     { key: "spotlight" as const, label: "Spotlight", Icon: Star },
     { key: "moderation" as const, label: "Moderation", Icon: AlertTriangle, badge: flagged.length },
   ];
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#EFF8FF] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-[#38B6FF] animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return (
+      <div className="min-h-screen bg-[#EFF8FF] flex items-center justify-center p-6" style={{ fontFamily: "'Nunito', sans-serif" }}>
+        <div className="bg-white rounded-3xl p-10 max-w-sm w-full text-center shadow-xl shadow-[#38B6FF]/10">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-red-400/30">
+            <Lock className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-[#1A1D20] text-xl mb-2" style={{ fontWeight: 900 }}>Admin Access Only</h2>
+          <p className="text-[#6b7a8d] text-sm mb-6" style={{ fontWeight: 500 }}>
+            This page is restricted to the site administrator.
+            {!user && " Please sign in with the admin account."}
+            {user && !isAdmin && ` Signed in as ${user.email}.`}
+          </p>
+          <Link
+            to={user ? "/jobs" : "/auth"}
+            className="block bg-[#38B6FF] text-white py-3.5 rounded-2xl text-sm shadow-lg shadow-[#38B6FF]/25 hover:bg-[#1a9fe8] transition-all"
+            style={{ fontWeight: 700 }}
+          >
+            {user ? "Back to Job Board" : "Sign In"}
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#EFF8FF]" style={{ fontFamily: "'Nunito', sans-serif" }}>

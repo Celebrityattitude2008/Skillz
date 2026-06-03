@@ -1,9 +1,10 @@
 import { Navbar } from "../components/navbar";
 import {
   Search, Plus, MapPin, Clock, Users, ChevronRight, Briefcase, DollarSign, X,
-  Palette, Code2, PenLine, Camera, Megaphone, LayoutGrid, FileText,
+  Palette, Code2, PenLine, Camera, Megaphone, LayoutGrid, FileText, LogIn, Tag,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Link } from "react-router";
 import { getGigs, addGig, type Gig } from "../../lib/firestore";
 import { useAuth } from "../../lib/auth-context";
 
@@ -116,7 +117,9 @@ export function JobBoard() {
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
-  const [form, setForm] = useState({ title: "", company: "", budget: "", description: "", category: "Design", location: "Remote" });
+  const [form, setForm] = useState({ title: "", company: "", budget: "", description: "", category: "Design", location: "Remote", deadline: "" });
+  const [gigSkills, setGigSkills] = useState<string[]>([]);
+  const [skillInput, setSkillInput] = useState("");
 
   useEffect(() => {
     getGigs().then((data) => { setGigs(data); setLoading(false); });
@@ -131,21 +134,34 @@ export function JobBoard() {
     return matchesSearch && matchesCategory;
   });
 
+  const addGigSkill = () => {
+    const s = skillInput.trim();
+    if (s && !gigSkills.includes(s)) setGigSkills((p) => [...p, s]);
+    setSkillInput("");
+  };
+
+  const handleSkillKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addGigSkill(); }
+  };
+
   const handlePostGig = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) { setShowPostForm(false); return; }
     setPosting(true);
     try {
       const newGig: Omit<Gig, "id"> = {
         ...form,
-        skills: [],
+        skills: gigSkills,
         applicants: 0,
         postedDate: "Just now",
-        postedBy: user?.uid,
+        postedBy: user.uid,
       };
       const ref = await addGig(newGig);
       setGigs((prev) => [{ id: ref.id, ...newGig }, ...prev]);
       setShowPostForm(false);
-      setForm({ title: "", company: "", budget: "", description: "", category: "Design", location: "Remote" });
+      setForm({ title: "", company: "", budget: "", description: "", category: "Design", location: "Remote", deadline: "" });
+      setGigSkills([]);
+      setSkillInput("");
     } finally {
       setPosting(false);
     }
@@ -324,15 +340,13 @@ export function JobBoard() {
       {showPostForm && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowPostForm(false)}>
           <div
-            className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden"
+            className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
             style={{ fontFamily: "'Nunito', sans-serif" }}
           >
-            <div className="bg-gradient-to-br from-[#FFC107] to-[#ff9f00] p-7 relative">
-              <button
-                onClick={() => setShowPostForm(false)}
-                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/25 flex items-center justify-center text-white hover:bg-white/40 transition-colors"
-              >
+            <div className="bg-gradient-to-br from-[#FFC107] to-[#ff9f00] p-7 relative flex-shrink-0">
+              <button onClick={() => setShowPostForm(false)}
+                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/25 flex items-center justify-center text-white hover:bg-white/40 transition-colors">
                 <X className="w-4 h-4" />
               </button>
               <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mb-3">
@@ -341,59 +355,116 @@ export function JobBoard() {
               <h2 className="text-white text-xl" style={{ fontWeight: 800 }}>Post a Gig</h2>
               <p className="text-white/80 text-sm" style={{ fontWeight: 500 }}>Connect with campus talent</p>
             </div>
-            <form onSubmit={handlePostGig} className="p-7 space-y-4">
-              {[
-                { key: "title", label: "Gig Title", placeholder: "e.g. Logo Design for Restaurant" },
-                { key: "company", label: "Your Company / Name", placeholder: "e.g. Local Coffee Co." },
-                { key: "budget", label: "Budget", placeholder: "e.g. $500 or $200/month" },
-              ].map((field) => (
-                <div key={field.key}>
-                  <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>{field.label.toUpperCase()}</label>
-                  <input
-                    type="text"
-                    placeholder={field.placeholder}
-                    value={(form as any)[field.key]}
-                    onChange={(e) => setForm((f) => ({ ...f, [field.key]: e.target.value }))}
-                    required
-                    className="w-full bg-[#EFF8FF] rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d]"
-                    style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}
-                  />
+
+            {!user ? (
+              <div className="p-8 text-center flex-1">
+                <div className="w-14 h-14 rounded-2xl bg-[#EFF8FF] flex items-center justify-center mx-auto mb-4">
+                  <LogIn className="w-7 h-7 text-[#38B6FF]" />
                 </div>
-              ))}
-              <div>
-                <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>CATEGORY</label>
-                <select
-                  value={form.category}
-                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                  className="w-full bg-[#EFF8FF] rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20]"
-                  style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}
-                >
-                  {["Design", "Dev", "Marketing", "Photo", "Writing", "Music", "Video"].map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                <h3 className="text-[#1A1D20] text-lg mb-2" style={{ fontWeight: 800 }}>Sign In to Post</h3>
+                <p className="text-[#6b7a8d] text-sm mb-6" style={{ fontWeight: 500 }}>
+                  Create a free account to post gigs and connect with campus talent.
+                </p>
+                <Link to="/auth" onClick={() => setShowPostForm(false)}
+                  className="block bg-[#38B6FF] text-white py-3.5 rounded-2xl text-sm shadow-lg shadow-[#38B6FF]/25 hover:bg-[#1a9fe8] transition-all"
+                  style={{ fontWeight: 700 }}>
+                  Sign In / Join Free
+                </Link>
               </div>
-              <div>
-                <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>DESCRIPTION</label>
-                <textarea
-                  placeholder="Describe the gig requirements..."
-                  rows={3}
-                  value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  required
-                  className="w-full bg-[#EFF8FF] rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d] resize-none"
-                  style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={posting}
-                className="w-full bg-gradient-to-r from-[#38B6FF] to-[#1a9fe8] text-white py-4 rounded-2xl shadow-lg shadow-[#38B6FF]/30 hover:shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
-                style={{ fontWeight: 700 }}
-              >
-                {posting ? "Posting…" : "Submit Gig Listing"}
-              </button>
-            </form>
+            ) : (
+              <form onSubmit={handlePostGig} className="p-7 space-y-4 overflow-y-auto flex-1">
+                {[
+                  { key: "title", label: "Gig Title", placeholder: "e.g. Logo Design for Restaurant" },
+                  { key: "company", label: "Your Company / Name", placeholder: "e.g. Local Coffee Co." },
+                  { key: "budget", label: "Budget", placeholder: "e.g. $500 or $200/month" },
+                ].map((field) => (
+                  <div key={field.key}>
+                    <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>{field.label.toUpperCase()}</label>
+                    <input type="text" placeholder={field.placeholder}
+                      value={(form as Record<string, string>)[field.key]}
+                      onChange={(e) => setForm((f) => ({ ...f, [field.key]: e.target.value }))}
+                      required
+                      className="w-full bg-[#EFF8FF] rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d] text-sm"
+                      style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
+                  </div>
+                ))}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>CATEGORY</label>
+                    <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                      className="w-full bg-[#EFF8FF] rounded-xl px-3 py-3 outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] text-sm"
+                      style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}>
+                      {["Design", "Dev", "Marketing", "Photo", "Writing", "Music", "Video"].map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>LOCATION</label>
+                    <select value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                      className="w-full bg-[#EFF8FF] rounded-xl px-3 py-3 outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] text-sm"
+                      style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}>
+                      {["Remote", "On Campus", "Hybrid", "In Person"].map((l) => (
+                        <option key={l} value={l}>{l}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>DEADLINE (OPTIONAL)</label>
+                  <input type="date" value={form.deadline}
+                    onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))}
+                    className="w-full bg-[#EFF8FF] rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] text-sm"
+                    style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
+                </div>
+
+                <div>
+                  <label className="text-xs text-[#6b7a8d] mb-1.5 flex items-center gap-1.5" style={{ fontWeight: 700 }}>
+                    <Tag className="w-3.5 h-3.5 text-[#38B6FF]" /> SKILLS NEEDED
+                  </label>
+                  <div className="flex gap-2 mb-2">
+                    <input type="text" placeholder="Add a skill (press Enter)"
+                      value={skillInput} onChange={(e) => setSkillInput(e.target.value)}
+                      onKeyDown={handleSkillKey}
+                      className="flex-1 bg-[#EFF8FF] rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d] text-sm"
+                      style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
+                    <button type="button" onClick={addGigSkill}
+                      className="px-4 bg-[#38B6FF] rounded-xl text-white hover:bg-[#1a9fe8] transition-colors">
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {gigSkills.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {gigSkills.map((s) => (
+                        <span key={s} className="flex items-center gap-1.5 bg-[#EFF8FF] text-[#38B6FF] text-xs px-3 py-1.5 rounded-full" style={{ fontWeight: 600 }}>
+                          {s}
+                          <button type="button" onClick={() => setGigSkills((p) => p.filter((x) => x !== s))}>
+                            <X className="w-3 h-3 hover:text-red-400 transition-colors" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>DESCRIPTION</label>
+                  <textarea placeholder="Describe the gig requirements, deliverables, and any specific skills needed..." rows={3}
+                    value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                    required
+                    className="w-full bg-[#EFF8FF] rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d] resize-none text-sm"
+                    style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
+                </div>
+
+                <button type="submit" disabled={posting}
+                  className="w-full bg-gradient-to-r from-[#38B6FF] to-[#1a9fe8] text-white py-4 rounded-2xl shadow-lg shadow-[#38B6FF]/30 hover:shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
+                  style={{ fontWeight: 700 }}>
+                  {posting ? "Posting…" : "Submit Gig Listing"}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}
