@@ -18,7 +18,7 @@ export function Navbar() {
   const navLinks = [
     { label: "Discover", to: "/" },
     { label: "Find Gigs", to: "/jobs" },
-    { label: "Profiles", to: "/profile/1" },
+    { label: "Profiles", to: "/profiles" },
   ];
 
   useEffect(() => {
@@ -135,7 +135,7 @@ export function Navbar() {
                     Edit My Profile
                   </Link>
                   <Link
-                    to="/profile/1"
+                    to="/profiles"
                     onClick={() => setDropdownOpen(false)}
                     className="flex items-center gap-2.5 px-4 py-3 text-sm text-[#1A1D20] hover:bg-[#EFF8FF] transition-colors"
                     style={{ fontWeight: 600 }}

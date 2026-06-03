@@ -280,7 +280,9 @@ export function StudentProfile() {
 
             <div className="bg-[#FFC107] rounded-3xl p-6 shadow-lg shadow-[#FFC107]/25">
               <p className="text-[#1A1D20] mb-1" style={{ fontWeight: 800 }}>Ready to collaborate?</p>
-              <p className="text-[#1A1D20]/70 text-sm mb-4" style={{ fontWeight: 500 }}>Starting at $45/hour</p>
+              {student.hourlyRate && (
+                <p className="text-[#1A1D20]/70 text-sm mb-4" style={{ fontWeight: 500 }}>Starting at {student.hourlyRate}</p>
+              )}
               <button className="w-full bg-[#1A1D20] text-white py-3 rounded-2xl hover:bg-[#2d3339] transition-colors" style={{ fontWeight: 700 }}>
                 Book {student.name.split(" ")[0]}
               </button>

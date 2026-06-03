@@ -58,8 +58,8 @@ export function LandingPage() {
   const [students, setStudents] = useState<StudentProfile[]>([]);
 
   useEffect(() => {
-    getGigs().then((data) => setGigs(data.slice(0, 4))).catch(() => {});
-    getStudents().then((data) => setStudents(data.slice(0, 3))).catch(() => {});
+    getGigs().then((data) => setGigs(data)).catch(() => {});
+    getStudents().then((data) => setStudents(data)).catch(() => {});
   }, []);
 
   const spotlightStudent = students[0];
@@ -117,9 +117,9 @@ export function LandingPage() {
 
               <div className="flex gap-6">
                 {[
-                  { value: "2,547", label: "Students" },
-                  { value: "12,891", label: "Gigs Done" },
-                  { value: "47", label: "Departments" },
+                  { value: students.length > 0 ? `${students.length}+` : "—", label: "Students" },
+                  { value: gigs.length > 0 ? `${gigs.length}+` : "—", label: "Active Gigs" },
+                  { value: gigs.filter(g => g.status === "Completed").length > 0 ? `${gigs.filter(g => g.status === "Completed").length}` : "Live", label: "Gigs Done" },
                 ].map((stat) => (
                   <div key={stat.label} className="text-white">
                     <p className="text-2xl" style={{ fontWeight: 800 }}>{stat.value}</p>
@@ -131,32 +131,36 @@ export function LandingPage() {
 
             {/* Right floating cards */}
             <div className="relative hidden lg:block h-[440px]">
-              <div className="absolute right-0 top-0 w-64 bg-white rounded-3xl shadow-2xl shadow-[#38B6FF]/20 overflow-hidden">
-                <ImageWithFallback
-                  src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=400&h=220&fit=crop&auto=format"
-                  alt="Students collaborating"
-                  className="w-full h-40 object-cover"
-                />
-                <div className="p-4">
-                  <p className="text-[#1A1D20] text-sm" style={{ fontWeight: 800 }}>Sarah Johnson</p>
-                  <p className="text-[#6b7a8d] text-xs mb-3" style={{ fontWeight: 500 }}>UI/UX Design · $45/hr</p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      <Star className="w-3.5 h-3.5 text-[#FFC107] fill-[#FFC107]" />
-                      <span className="text-xs text-[#1A1D20]" style={{ fontWeight: 700 }}>4.9</span>
+              {students[0] && (
+                <div className="absolute right-0 top-0 w-64 bg-white rounded-3xl shadow-2xl shadow-[#38B6FF]/20 overflow-hidden">
+                  <ImageWithFallback
+                    src={students[0].image}
+                    alt={students[0].name}
+                    className="w-full h-40 object-cover"
+                  />
+                  <div className="p-4">
+                    <p className="text-[#1A1D20] text-sm" style={{ fontWeight: 800 }}>{students[0].name}</p>
+                    <p className="text-[#6b7a8d] text-xs mb-3" style={{ fontWeight: 500 }}>
+                      {students[0].major}{students[0].hourlyRate ? ` · ${students[0].hourlyRate}` : ""}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3.5 h-3.5 text-[#FFC107] fill-[#FFC107]" />
+                        <span className="text-xs text-[#1A1D20]" style={{ fontWeight: 700 }}>{students[0].rating}</span>
+                      </div>
+                      <span className="text-xs bg-[#EFF8FF] text-[#38B6FF] px-3 py-1 rounded-full" style={{ fontWeight: 700 }}>View Profile</span>
                     </div>
-                    <span className="text-xs bg-[#EFF8FF] text-[#38B6FF] px-3 py-1 rounded-full" style={{ fontWeight: 700 }}>View Profile</span>
                   </div>
                 </div>
-              </div>
+              )}
 
               <div className="absolute left-0 top-10 bg-white rounded-2xl shadow-xl px-5 py-4 flex items-center gap-3 -rotate-3 hover:rotate-0 transition-transform">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#38B6FF] to-[#1a9fe8] flex items-center justify-center shadow-md shadow-[#38B6FF]/30">
                   <Users className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-[#1A1D20] text-base" style={{ fontWeight: 800 }}>2,547</p>
-                  <p className="text-[#6b7a8d] text-xs" style={{ fontWeight: 500 }}>Active Portfolios</p>
+                  <p className="text-[#1A1D20] text-base" style={{ fontWeight: 800 }}>{students.length > 0 ? students.length : "—"}</p>
+                  <p className="text-[#6b7a8d] text-xs" style={{ fontWeight: 500 }}>Active Profiles</p>
                 </div>
               </div>
 
@@ -212,7 +216,7 @@ export function LandingPage() {
       <section className="max-w-6xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-[#1A1D20] text-xl" style={{ fontWeight: 800 }}>Featured Talent</h2>
-          <Link to="/profile/1" className="text-[#38B6FF] text-sm flex items-center gap-1 hover:gap-2 transition-all" style={{ fontWeight: 700 }}>
+          <Link to="/profiles" className="text-[#38B6FF] text-sm flex items-center gap-1 hover:gap-2 transition-all" style={{ fontWeight: 700 }}>
             View all <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
@@ -231,7 +235,7 @@ export function LandingPage() {
           </div>
         ) : (
           <div className="grid md:grid-cols-3 gap-4">
-            {students.map((student, idx) => (
+            {students.slice(0, 3).map((student, idx) => (
               <Link
                 to={`/profile/${student.id}`}
                 key={student.id}
@@ -256,7 +260,7 @@ export function LandingPage() {
                     ))}
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[#38B6FF]" style={{ fontWeight: 800 }}>$45/hr</span>
+                    <span className="text-[#38B6FF]" style={{ fontWeight: 800 }}>{student.hourlyRate || "Contact"}</span>
                     <span className="text-xs text-white bg-[#FFC107] text-[#1A1D20] px-4 py-1.5 rounded-full group-hover:bg-[#FFD000] transition-colors" style={{ fontWeight: 700, color: "#1A1D20" }}>
                       View Now
                     </span>

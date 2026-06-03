@@ -6,9 +6,10 @@ import {
   signInWithPopup,
   updateProfile,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, db, googleProvider } from "../../lib/firebase";
-import { Zap, Mail, Lock, User, Eye, EyeOff, AlertCircle, Chrome } from "lucide-react";
+import { Zap, Mail, Lock, User, Eye, EyeOff, AlertCircle, Chrome, GraduationCap, ChevronDown } from "lucide-react";
+import { NIGERIAN_UNIVERSITIES } from "../../lib/nigerian-universities";
 
 export function AuthPage() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"student" | "client">("student");
+  const [university, setUniversity] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -47,6 +49,7 @@ export function AuthPage() {
           name,
           email,
           role,
+          university: role === "student" ? university : "",
           verificationStatus: "Pending",
           joinDate: new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }),
           gigs: 0,
@@ -68,14 +71,13 @@ export function AuthPage() {
     setLoading(true);
     try {
       const cred = await signInWithPopup(auth, googleProvider);
-      const snap = await import("firebase/firestore").then(({ getDoc, doc: d }) =>
-        getDoc(d(db, "users", cred.user.uid))
-      );
+      const snap = await getDoc(doc(db, "users", cred.user.uid));
       if (!snap.exists()) {
         await setDoc(doc(db, "users", cred.user.uid), {
           name: cred.user.displayName || "",
           email: cred.user.email || "",
           role: "client",
+          university: "",
           verificationStatus: "Pending",
           joinDate: new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }),
           gigs: 0,
@@ -91,10 +93,7 @@ export function AuthPage() {
   };
 
   return (
-    <div
-      className="min-h-screen bg-[#EFF8FF] flex items-center justify-center p-4"
-      style={{ fontFamily: "'Nunito', sans-serif" }}
-    >
+    <div className="min-h-screen bg-[#EFF8FF] flex items-center justify-center p-4" style={{ fontFamily: "'Nunito', sans-serif" }}>
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -107,7 +106,7 @@ export function AuthPage() {
             </span>
           </Link>
           <p className="text-[#6b7a8d] text-sm mt-2" style={{ fontWeight: 500 }}>
-            {mode === "login" ? "Welcome back! Sign in to continue." : "Join 2,500+ students on campus."}
+            {mode === "login" ? "Welcome back! Sign in to continue." : "Join campus students and clients."}
           </p>
         </div>
 
@@ -152,90 +151,89 @@ export function AuthPage() {
             <form onSubmit={handleEmailAuth} className="space-y-4">
               {mode === "signup" && (
                 <div>
-                  <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>
-                    FULL NAME
-                  </label>
+                  <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>FULL NAME</label>
                   <div className="relative">
                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7a8d]" />
-                    <input
-                      type="text"
-                      placeholder="Your full name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
+                    <input type="text" placeholder="Your full name" value={name}
+                      onChange={(e) => setName(e.target.value)} required
                       className="w-full pl-10 pr-4 py-3.5 bg-[#EFF8FF] rounded-xl outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d]"
-                      style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}
-                    />
+                      style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
                   </div>
                 </div>
               )}
 
               <div>
-                <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>
-                  EMAIL
-                </label>
+                <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>EMAIL</label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7a8d]" />
-                  <input
-                    type="email"
-                    placeholder="you@university.edu"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+                  <input type="email" placeholder="you@university.edu.ng" value={email}
+                    onChange={(e) => setEmail(e.target.value)} required
                     className="w-full pl-10 pr-4 py-3.5 bg-[#EFF8FF] rounded-xl outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d]"
-                    style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}
-                  />
+                    style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>
-                  PASSWORD
-                </label>
+                <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>PASSWORD</label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7a8d]" />
                   <input
                     type={showPassword ? "text" : "password"}
                     placeholder={mode === "signup" ? "Min. 6 characters" : "Your password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
+                    value={password} onChange={(e) => setPassword(e.target.value)} required
+                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
                     className="w-full pl-10 pr-11 py-3.5 bg-[#EFF8FF] rounded-xl outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d]"
-                    style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#6b7a8d] hover:text-[#1A1D20] transition-colors"
-                  >
+                    style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#6b7a8d] hover:text-[#1A1D20] transition-colors">
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
               {mode === "signup" && (
-                <div>
-                  <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>
-                    I AM A
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {(["student", "client"] as const).map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setRole(r)}
-                        className={`py-3 rounded-xl text-sm capitalize transition-all border-2 ${
-                          role === r
-                            ? "border-[#38B6FF] bg-[#EFF8FF] text-[#38B6FF]"
-                            : "border-[#EFF8FF] text-[#6b7a8d] hover:border-[#38B6FF]/30"
-                        }`}
-                        style={{ fontWeight: 600 }}
-                      >
-                        {r === "student" ? "Student" : "Business / Client"}
-                      </button>
-                    ))}
+                <>
+                  <div>
+                    <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>I AM A</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {(["student", "client"] as const).map((r) => (
+                        <button key={r} type="button" onClick={() => setRole(r)}
+                          className={`py-3 rounded-xl text-sm capitalize transition-all border-2 ${
+                            role === r
+                              ? "border-[#38B6FF] bg-[#EFF8FF] text-[#38B6FF]"
+                              : "border-[#EFF8FF] text-[#6b7a8d] hover:border-[#38B6FF]/30"
+                          }`}
+                          style={{ fontWeight: 600 }}>
+                          {r === "student" ? "Student" : "Business / Client"}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+
+                  {role === "student" && (
+                    <div>
+                      <label className="text-xs text-[#6b7a8d] mb-1.5 flex items-center gap-1.5" style={{ fontWeight: 700 }}>
+                        <GraduationCap className="w-3.5 h-3.5 text-[#38B6FF]" /> UNIVERSITY
+                      </label>
+                      <div className="relative">
+                        <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7a8d]" />
+                        <select
+                          value={university}
+                          onChange={(e) => setUniversity(e.target.value)}
+                          required
+                          className="w-full pl-10 pr-10 py-3.5 bg-[#EFF8FF] rounded-xl outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] appearance-none"
+                          style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}
+                        >
+                          <option value="">Select your university…</option>
+                          {NIGERIAN_UNIVERSITIES.map((u) => (
+                            <option key={u} value={u}>{u}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7a8d] pointer-events-none" />
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
               {error && (
@@ -245,12 +243,9 @@ export function AuthPage() {
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={loading}
+              <button type="submit" disabled={loading}
                 className="w-full bg-gradient-to-r from-[#38B6FF] to-[#1a9fe8] text-white py-4 rounded-2xl shadow-lg shadow-[#38B6FF]/30 hover:shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:scale-100 mt-2"
-                style={{ fontWeight: 700 }}
-              >
+                style={{ fontWeight: 700 }}>
                 {loading ? "Please wait…" : mode === "login" ? "Log In" : "Create Account"}
               </button>
             </form>

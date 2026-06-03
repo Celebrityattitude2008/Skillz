@@ -9,7 +9,8 @@ import { Link } from "react-router";
 import {
   getAdminUsers, updateAdminUser, getPendingVerifications, deleteVerification,
   getFlaggedContent, deleteFlaggedItem, getStudents, setSpotlightStudent,
-  seedFirestore, type AdminUser, type PendingVerification, type FlaggedItem, type StudentProfile,
+  seedFirestore, approveVerification,
+  type AdminUser, type PendingVerification, type FlaggedItem, type StudentProfile,
 } from "../../lib/firestore";
 import { useAuth } from "../../lib/auth-context";
 import { ADMIN_EMAIL } from "../../lib/firebase";
@@ -68,13 +69,15 @@ export function AdminPanel() {
 
   const handleVerify = async (v: PendingVerification, approve: boolean) => {
     if (!v.id) return;
-    await deleteVerification(v.id);
     if (approve) {
+      await approveVerification(v);
       const match = users.find((u) => u.email === v.email);
       if (match?.id) await updateAdminUser(match.id, { verificationStatus: "Verified" });
+      setUsers((prev) => prev.map((u) => u.email === v.email ? { ...u, verificationStatus: "Verified" } : u));
+    } else {
+      await deleteVerification(v.id);
     }
     setVerifications((prev) => prev.filter((x) => x.id !== v.id));
-    if (approve) setUsers((prev) => prev.map((u) => u.email === v.email ? { ...u, verificationStatus: "Verified" } : u));
   };
 
   const handleDeleteFlagged = async (id: string) => {
@@ -317,6 +320,7 @@ export function AdminPanel() {
                           {[
                             { label: "Full Name", value: v.name },
                             { label: "Email", value: v.email },
+                            { label: "University", value: v.university || "—" },
                             { label: "Major", value: v.major },
                             { label: "Year", value: v.year },
                             { label: "Student ID", value: v.studentId },

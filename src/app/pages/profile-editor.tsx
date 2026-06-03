@@ -1,14 +1,15 @@
 import { Navbar } from "../components/navbar";
 import {
   User, Camera, Plus, X, Save, Loader2, CheckCircle, Upload,
-  MapPin, Phone, GraduationCap, Briefcase, Link2, DollarSign,
+  MapPin, Phone, GraduationCap, Briefcase, Link2, DollarSign, ShieldCheck,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../../lib/auth-context";
 import {
   getStudentByUid, createStudentProfile, updateStudentProfile,
-  uploadProfilePhoto, type StudentProfile,
+  uploadProfilePhoto, submitVerificationRequest, uploadVerificationId,
+  type StudentProfile,
 } from "../../lib/firestore";
 
 const YEARS = ["Freshman", "Sophomore", "Junior", "Senior", "Graduate"];
@@ -26,6 +27,15 @@ export function ProfileEditor() {
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const idFileRef = useRef<HTMLInputElement>(null);
+
+  // Verification state
+  const [verStatus, setVerStatus] = useState<string>("Pending");
+  const [verStudentId, setVerStudentId] = useState("");
+  const [verSubmitting, setVerSubmitting] = useState(false);
+  const [verSubmitted, setVerSubmitted] = useState(false);
+  const [verIdFile, setVerIdFile] = useState<File | null>(null);
+  const [verIdPreview, setVerIdPreview] = useState<string>("");
 
   const [form, setForm] = useState({
     name: "",
@@ -72,6 +82,7 @@ export function ProfileEditor() {
             name: user.displayName || "",
             image: user.photoURL || "",
           }));
+          setVerStatus("Pending");
         }
       })
       .catch(() => {})
@@ -94,6 +105,43 @@ export function ProfileEditor() {
 
   const updatePortfolioItem = (id: number, key: keyof PortfolioItem, value: string) => {
     setPortfolio((prev) => prev.map((p) => p.id === id ? { ...p, [key]: value } : p));
+  };
+
+  const handleIdFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setVerIdFile(file);
+    setVerIdPreview(URL.createObjectURL(file));
+  };
+
+  const handleSubmitVerification = async () => {
+    if (!user || !verStudentId.trim()) {
+      alert("Please enter your student ID number.");
+      return;
+    }
+    setVerSubmitting(true);
+    try {
+      let idImageUrl = "";
+      if (verIdFile) {
+        idImageUrl = await uploadVerificationId(user.uid, verIdFile);
+      }
+      await submitVerificationRequest({
+        uid: user.uid,
+        name: form.name || user.displayName || "",
+        email: user.email || "",
+        major: form.major,
+        year: form.year,
+        university: form.university,
+        studentId: verStudentId,
+        idImage: idImageUrl,
+      });
+      setVerSubmitted(true);
+      setVerStatus("Pending");
+    } catch {
+      alert("Verification submission failed. Please try again.");
+    } finally {
+      setVerSubmitting(false);
+    }
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -399,6 +447,83 @@ export function ProfileEditor() {
               <span className="text-[#1A1D20] text-sm" style={{ fontWeight: 600 }}>Show WhatsApp button on my profile</span>
             </label>
           </div>
+
+          {/* Verification */}
+          {verStatus !== "Verified" && (
+            <div className="bg-white rounded-3xl p-6 shadow-sm space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#38B6FF] to-[#1a9fe8] flex items-center justify-center shadow-md shadow-[#38B6FF]/25 flex-shrink-0">
+                  <ShieldCheck className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-[#1A1D20]" style={{ fontWeight: 800 }}>Get Verified</h2>
+                  <p className="text-[#6b7a8d] text-xs" style={{ fontWeight: 500 }}>Upload your student ID to earn a Verified badge</p>
+                </div>
+              </div>
+
+              {verSubmitted ? (
+                <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4">
+                  <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                  <p className="text-emerald-700 text-sm" style={{ fontWeight: 600 }}>
+                    Submitted! The admin will review your ID and approve your account soon.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>
+                      STUDENT ID NUMBER
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. STU-2023-12345"
+                      value={verStudentId}
+                      onChange={(e) => setVerStudentId(e.target.value)}
+                      className="w-full bg-[#EFF8FF] rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d]"
+                      style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>
+                      UPLOAD STUDENT ID CARD
+                    </label>
+                    <input ref={idFileRef} type="file" accept="image/*" className="hidden" onChange={handleIdFileChange} />
+                    {verIdPreview ? (
+                      <div className="relative">
+                        <img src={verIdPreview} alt="ID Preview" className="w-full h-40 object-cover rounded-2xl" />
+                        <button
+                          type="button"
+                          onClick={() => { setVerIdFile(null); setVerIdPreview(""); }}
+                          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => idFileRef.current?.click()}
+                        className="w-full h-28 border-2 border-dashed border-[#38B6FF]/30 rounded-2xl flex flex-col items-center justify-center gap-2 text-[#38B6FF] hover:bg-[#EFF8FF] transition-colors"
+                      >
+                        <Upload className="w-5 h-5" />
+                        <span className="text-sm" style={{ fontWeight: 600 }}>Click to upload your ID photo</span>
+                        <span className="text-xs text-[#6b7a8d]" style={{ fontWeight: 500 }}>JPG, PNG — front side of your student card</span>
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSubmitVerification}
+                    disabled={verSubmitting || !verStudentId.trim()}
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#38B6FF] to-[#1a9fe8] text-white py-3.5 rounded-2xl shadow-md shadow-[#38B6FF]/25 hover:shadow-lg transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:scale-100 text-sm"
+                    style={{ fontWeight: 700 }}
+                  >
+                    {verSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting…</> : <><ShieldCheck className="w-4 h-4" /> Submit for Verification</>}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Save */}
           <button
