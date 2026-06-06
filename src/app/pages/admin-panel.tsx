@@ -7,7 +7,7 @@ import {
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import {
-  getAdminUsers, updateAdminUser, getPendingVerifications, deleteVerification,
+  getUsers, updateUser, getPendingVerifications, deleteVerification,
   getFlaggedContent, deleteFlaggedItem, getStudents, setSpotlightStudent,
   seedFirestore, approveVerification,
   type AdminUser, type PendingVerification, type FlaggedItem, type StudentProfile,
@@ -45,7 +45,7 @@ export function AdminPanel() {
   const loadAll = async () => {
     setLoading(true);
     const [u, v, f, s] = await Promise.all([
-      getAdminUsers(),
+      getUsers(),
       getPendingVerifications(),
       getFlaggedContent(),
       getStudents(),
@@ -72,7 +72,7 @@ export function AdminPanel() {
     if (approve) {
       await approveVerification(v);
       const match = users.find((u) => u.email === v.email);
-      if (match?.id) await updateAdminUser(match.id, { verificationStatus: "Verified" });
+      if (match?.id) await updateUser(match.id, { verificationStatus: "Verified" });
       setUsers((prev) => prev.map((u) => u.email === v.email ? { ...u, verificationStatus: "Verified" } : u));
     } else {
       await deleteVerification(v.id);
@@ -87,7 +87,7 @@ export function AdminPanel() {
 
   const handleBan = async (user: AdminUser) => {
     if (!user.id) return;
-    await updateAdminUser(user.id, { verificationStatus: "Rejected" });
+    await updateUser(user.id, { verificationStatus: "Rejected" });
     setUsers((prev) => prev.map((u) => u.id === user.id ? { ...u, verificationStatus: "Rejected" } : u));
   };
 
@@ -180,7 +180,7 @@ export function AdminPanel() {
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           {[
             { Icon: Users, value: users.length, label: "Total Users", color: "from-[#38B6FF] to-[#1a9fe8]" },
             { Icon: Clock, value: verifications.length, label: "Pending", color: "from-amber-400 to-orange-500" },
@@ -246,7 +246,7 @@ export function AdminPanel() {
                         placeholder="Search users..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 pr-4 py-2.5 rounded-xl bg-[#EFF8FF] outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-sm text-[#1A1D20] placeholder:text-[#6b7a8d] w-56"
+                        className="pl-9 pr-4 py-2.5 rounded-xl bg-[#EFF8FF] outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-sm text-[#1A1D20] placeholder:text-[#6b7a8d] w-full max-w-xs"
                         style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}
                       />
                     </div>

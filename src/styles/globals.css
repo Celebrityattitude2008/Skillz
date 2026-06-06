@@ -5,3 +5,36 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body, #root {
+  min-height: 100vh;
+}
+
+img, svg, video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+button, input, textarea, select {
+  min-width: 0;
+  font: inherit;
+}
+
+@media (max-width: 640px) {
+  .max-w-6xl,
+  .max-w-5xl,
+  .max-w-2xl,
+  .max-w-md {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}

@@ -144,7 +144,7 @@ function GigDetailModal({
 
         <div className="p-7 space-y-5">
           {/* Stats grid */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
               { icon: <DollarSign className="w-4 h-4" />, label: "Budget", value: gig.budget, color: "text-[#38B6FF]" },
               { icon: <Users className="w-4 h-4" />, label: "Applicants", value: `${gig.applicants} applied`, color: "text-violet-500" },
@@ -430,7 +430,7 @@ export function JobBoard() {
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           {[
             { Icon: Briefcase, value: gigs.length.toString(), label: "Active Gigs", color: "from-[#38B6FF] to-[#1a9fe8]" },
             { Icon: Users, value: studentCount > 0 ? studentCount.toString() : "—", label: "Students", color: "from-violet-400 to-purple-500" },
@@ -599,7 +599,7 @@ export function JobBoard() {
                   </div>
                 ))}
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>CATEGORY</label>
                     <div className="relative">

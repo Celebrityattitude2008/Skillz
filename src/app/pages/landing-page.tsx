@@ -94,12 +94,12 @@ export function LandingPage() {
                 </p>
               </div>
 
-              <div className="flex gap-3 bg-white rounded-2xl p-2 shadow-2xl shadow-[#38B6FF]/20 max-w-md">
+              <div className="flex flex-col sm:flex-row gap-3 bg-white rounded-2xl p-2 shadow-2xl shadow-[#38B6FF]/20 w-full max-w-full">
                 <div className="flex-1 flex items-center gap-3 px-3">
                   <Search className="w-5 h-5 text-[#6b7a8d] shrink-0" />
                   <input
                     type="text"
-                    placeholder="Search skills or gigs..."
+                    placeholder="Search students, skills, portfolios..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="flex-1 outline-none text-[#1A1D20] placeholder:text-[#6b7a8d] bg-transparent"
@@ -107,11 +107,11 @@ export function LandingPage() {
                   />
                 </div>
                 <Link
-                  to={`/jobs${searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : ""}`}
-                  className="bg-[#FFC107] text-[#1A1D20] px-5 py-3 rounded-xl shadow-md hover:bg-[#FFD000] transition-all hover:scale-105 active:scale-95"
+                  to={`/profiles${searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : ""}`}
+                  className="bg-[#FFC107] text-[#1A1D20] px-5 py-3 rounded-xl shadow-md hover:bg-[#FFD000] transition-all hover:scale-105 active:scale-95 w-full sm:w-auto text-center"
                   style={{ fontWeight: 700 }}
                 >
-                  Search
+                  Browse Talent
                 </Link>
               </div>
 

@@ -195,7 +195,7 @@ export function AuthPage() {
                 <>
                   <div>
                     <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>I AM A</label>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {(["student", "client"] as const).map((r) => (
                         <button key={r} type="button" onClick={() => setRole(r)}
                           className={`py-3 rounded-xl text-sm capitalize transition-all border-2 ${

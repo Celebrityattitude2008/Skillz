@@ -8,7 +8,7 @@ import { useNavigate } from "react-router";
 import { useAuth } from "../../lib/auth-context";
 import {
   getStudentByUid, createStudentProfile, updateStudentProfile,
-  uploadProfilePhoto, submitVerificationRequest, uploadVerificationId,
+  submitVerificationRequest,
   type StudentProfile,
 } from "../../lib/firestore";
 
@@ -16,6 +16,21 @@ const YEARS = ["Freshman", "Sophomore", "Junior", "Senior", "Graduate"];
 const SKILL_CATEGORIES = ["Design", "Dev", "Marketing", "Photo", "Writing", "Music", "Video", "Other"];
 
 type PortfolioItem = { id: number; image: string; title: string; url?: string };
+
+const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === "string") {
+        resolve(result);
+      } else {
+        reject(new Error("Failed to convert file to base64."));
+      }
+    };
+    reader.onerror = () => reject(new Error("Failed to read file."));
+    reader.readAsDataURL(file);
+  });
 
 export function ProfileEditor() {
   const { user, loading: authLoading } = useAuth();
@@ -107,11 +122,19 @@ export function ProfileEditor() {
     setPortfolio((prev) => prev.map((p) => p.id === id ? { ...p, [key]: value } : p));
   };
 
-  const handleIdFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleIdFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setVerIdFile(file);
-    setVerIdPreview(URL.createObjectURL(file));
+    setUploading(true);
+    try {
+      const base64 = await fileToBase64(file);
+      setVerIdPreview(base64);
+    } catch {
+      alert("Failed to load verification image. Please try a different file.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmitVerification = async () => {
@@ -123,7 +146,7 @@ export function ProfileEditor() {
     try {
       let idImageUrl = "";
       if (verIdFile) {
-        idImageUrl = await uploadVerificationId(user.uid, verIdFile);
+        idImageUrl = await fileToBase64(verIdFile);
       }
       await submitVerificationRequest({
         uid: user.uid,
@@ -149,10 +172,10 @@ export function ProfileEditor() {
     if (!file || !user) return;
     setUploading(true);
     try {
-      const url = await uploadProfilePhoto(user.uid, file);
-      setForm((f) => ({ ...f, image: url }));
+      const base64 = await fileToBase64(file);
+      setForm((f) => ({ ...f, image: base64 }));
     } catch {
-      alert("Photo upload failed. Make sure Firebase Storage is enabled in your Firebase Console.");
+      alert("Failed to load profile photo. Please try a different image.");
     } finally {
       setUploading(false);
     }
@@ -292,7 +315,7 @@ export function ProfileEditor() {
                 className="input-style resize-none" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
             </Field>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Hourly Rate" icon={<DollarSign className="w-4 h-4" />}>
                 <input type="text" placeholder="e.g. $45/hr" value={form.hourlyRate}
                   onChange={(e) => setForm((f) => ({ ...f, hourlyRate: e.target.value }))}
@@ -320,7 +343,7 @@ export function ProfileEditor() {
                 onChange={(e) => setForm((f) => ({ ...f, university: e.target.value }))}
                 className="input-style" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
             </Field>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Major / Course">
                 <input type="text" placeholder="e.g. Computer Science" value={form.major}
                   onChange={(e) => setForm((f) => ({ ...f, major: e.target.value }))}

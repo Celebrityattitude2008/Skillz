@@ -153,7 +153,7 @@ export function StudentProfile() {
               <div className="bg-[#111214] rounded-3xl p-6 shadow-xl">
                 <h2 className="text-white mb-5" style={{ fontWeight: 800 }}>Visual Portfolio</h2>
                 {student.portfolio.length > 0 ? (
-                  <Masonry columnsCount={2} gutter="0.75rem">
+                  <Masonry columnsCount={2} columnsCountBreakPoints={{ 350: 1, 768: 2 }} gutter="0.75rem">
                     {student.portfolio.map((item) => (
                       <div key={item.id} className="group relative overflow-hidden rounded-2xl">
                         <ImageWithFallback src={item.image} alt={item.title} className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105" />

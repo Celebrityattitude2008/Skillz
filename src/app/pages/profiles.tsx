@@ -5,7 +5,7 @@ import {
   Palette, Code2, PenLine, Camera, Megaphone, LayoutGrid, Loader2,
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { getStudents, type StudentProfile } from "../../lib/firestore";
 
 const CATEGORIES = [
@@ -47,9 +47,18 @@ const verificationColors: Record<string, string> = {
 export function ProfilesPage() {
   const [students, setStudents] = useState<StudentProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState("rating");
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get("q") ?? "";
+    const cat = params.get("category") ?? "All";
+    setSearch(q);
+    setCategory(cat);
+  }, [location.search]);
 
   useEffect(() => {
     getStudents()
@@ -127,9 +136,9 @@ export function ProfilesPage() {
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Filters + Sort row */}
-        <div className="flex flex-wrap gap-3 items-center justify-between mb-6">
+        <div className="flex flex-col gap-3 items-stretch justify-between mb-6 sm:flex-row sm:items-center">
           {/* Category chips */}
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <div className="flex flex-wrap gap-2 overflow-x-auto pb-1 scrollbar-hide">
             {CATEGORIES.map(({ label, Icon }) => (
               <button
                 key={label}
@@ -148,7 +157,7 @@ export function ProfilesPage() {
           </div>
 
           {/* Sort */}
-          <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow-sm">
+          <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow-sm w-full sm:w-auto">
             <ArrowUpDown className="w-4 h-4 text-[#6b7a8d]" />
             <select
               value={sort}

@@ -332,6 +332,15 @@ export async function updateAdminUser(id: string, data: Partial<AdminUser>) {
   return updateDoc(doc(db, 'adminUsers', id), data);
 }
 
+export async function getUsers(): Promise<AdminUser[]> {
+  const snap = await getDocs(collection(db, 'users'));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as AdminUser));
+}
+
+export async function updateUser(id: string, data: Partial<AdminUser>) {
+  return updateDoc(doc(db, 'users', id), data);
+}
+
 export async function getPendingVerifications(): Promise<PendingVerification[]> {
   const snap = await getDocs(collection(db, 'pendingVerifications'));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as PendingVerification));
