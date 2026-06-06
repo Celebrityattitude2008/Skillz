@@ -1,42 +1,66 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
 
-    // Gigs — public read, auth required to write
-    match /gigs/{gig} {
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email in ['pauladamu600@gmail.com'];
+    }
+
+    function isOwner(uidField) {
+      return isSignedIn() && request.auth.uid == uidField;
+    }
+
+    function canUpdateStudentProfile() {
+      return isOwner(resource.data.uid)
+        && (resource.data.lastUpdated == null
+          || request.time.toMillis() > resource.data.lastUpdated.toMillis() + 604800000)
+        && request.resource.data.lastUpdated == request.time;
+    }
+
+    match /students/{studentId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if canUpdateStudentProfile();
+      allow delete: if isOwner(resource.data.uid);
     }
 
-    // Students — public read, auth required to write
-    match /students/{student} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    // Settings (spotlight) — public read, auth required to write
-    match /settings/{setting} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    // Admin collections — authenticated users only
-    match /adminUsers/{userId} {
-      allow read, write: if request.auth != null;
-    }
-
-    match /pendingVerifications/{id} {
-      allow read, write: if request.auth != null;
-    }
-
-    match /flaggedContent/{id} {
-      allow read, write: if request.auth != null;
-    }
-
-    // User profiles — public read, owner write
     match /users/{userId} {
+      allow read: if isAdmin() || request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId && request.resource.data.email == request.auth.token.email;
+      allow update, delete: if request.auth.uid == userId;
+    }
+
+    match /gigs/{gigId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.resource.data.postedBy == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.postedBy == request.auth.uid;
+    }
+
+    match /applications/{appId} {
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid && request.resource.data.gigPosterId != null;
+      allow read: if isAdmin() || request.auth.uid == resource.data.studentId || request.auth.uid == resource.data.gigPosterId;
+      allow update, delete: if request.auth.uid == resource.data.studentId || request.auth.uid == resource.data.gigPosterId;
+    }
+
+    match /pendingVerifications/{verificationId} {
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow read, update, delete: if isAdmin() || request.auth.uid == resource.data.uid;
+    }
+
+    match /adminUsers/{adminId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /flaggedContent/{flagId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }
