@@ -2,16 +2,23 @@ import { Navbar } from "../components/navbar";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import {
   Mail, Phone, MapPin, Briefcase, Award, MessageCircle, Star,
-  CheckCircle, Loader2, Send,
+  CheckCircle, Loader2, Send, Crown, Calendar,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router";
 import Masonry from "react-responsive-masonry";
 import {
-  getStudentById, getStudents, addReview,
+  getStudentById, getStudents, addReview, incrementProfileView,
+  incrementWhatsAppClick, updateAvailability,
   type StudentProfile as SP,
 } from "../../lib/firestore";
 import { useAuth } from "../../lib/auth-context";
+
+const DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const TIMES = [
+  "6:00 AM", "7:00 AM", "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
+  "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM", "8:00 PM",
+];
 
 function StarPicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   const [hover, setHover] = useState(0);
@@ -42,6 +49,14 @@ export function StudentProfile() {
   const [submitting, setSubmitting] = useState(false);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
+  const [showAvailForm, setShowAvailForm] = useState(false);
+  const [availDays, setAvailDays] = useState<string[]>([]);
+  const [availStart, setAvailStart] = useState("9:00 AM");
+  const [availEnd, setAvailEnd] = useState("5:00 PM");
+  const [savingAvail, setSavingAvail] = useState(false);
+
+  const viewTracked = useRef(false);
+
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -60,6 +75,21 @@ export function StudentProfile() {
   const isOwn = !!(user && student && user.uid === student.uid);
   const canReview = !!(user && !isOwn && !reviewSubmitted);
 
+  useEffect(() => {
+    if (student?.id && !isOwn && !viewTracked.current) {
+      viewTracked.current = true;
+      incrementProfileView(student.id);
+    }
+  }, [student?.id, isOwn]);
+
+  useEffect(() => {
+    if (showAvailForm && student?.availability) {
+      setAvailDays(student.availability.days || []);
+      setAvailStart(student.availability.startTime || "9:00 AM");
+      setAvailEnd(student.availability.endTime || "5:00 PM");
+    }
+  }, [showAvailForm, student?.availability]);
+
   const reviews = (student?.reviews ?? []) as { id: number; author: string; role: string; rating: number; comment: string; date: string }[];
   const satisfactionRate = reviews.length > 0
     ? Math.round((reviews.filter((r) => r.rating >= 4).length / reviews.length) * 100)
@@ -71,6 +101,37 @@ export function StudentProfile() {
   const whatsappUrl = student?.whatsappEnabled
     ? `https://wa.me/${student.whatsappNumber.replace(/\D/g, "")}?text=${whatsappMessage}`
     : "";
+
+  const handleWhatsAppClick = () => {
+    if (student?.id) incrementWhatsAppClick(student.id);
+  };
+
+  const bookDay = (day: string) => {
+    if (!student) return;
+    const timeRange = student.availability
+      ? ` between ${student.availability.startTime}–${student.availability.endTime}` : "";
+    const msg = encodeURIComponent(
+      `Hi ${student.name.split(" ")[0]}, I'd like to book a consultation slot on ${day}${timeRange}. Are you available?`
+    );
+    if (student.whatsappEnabled && student.whatsappNumber) {
+      if (student.id) incrementWhatsAppClick(student.id);
+      window.open(`https://wa.me/${student.whatsappNumber.replace(/\D/g, "")}?text=${msg}`, "_blank");
+    } else {
+      window.open(`mailto:${student.email}?subject=Booking%20Request&body=${msg}`, "_blank");
+    }
+  };
+
+  const handleSaveAvailability = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!student?.id) return;
+    setSavingAvail(true);
+    try {
+      await updateAvailability(student.id, { days: availDays, startTime: availStart, endTime: availEnd });
+      setStudent((prev) => prev ? { ...prev, availability: { days: availDays, startTime: availStart, endTime: availEnd } } : prev);
+      setShowAvailForm(false);
+    } catch { /* silent */ }
+    setSavingAvail(false);
+  };
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,7 +227,14 @@ export function StudentProfile() {
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
                 <div>
-                  <h1 className="text-2xl text-slate-900 dark:text-white" style={{ fontWeight: 900 }}>{student.name}</h1>
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <h1 className="text-2xl text-slate-900 dark:text-white" style={{ fontWeight: 900 }}>{student.name}</h1>
+                    {student.isPro && (
+                      <span className="flex items-center gap-1 bg-[#FFC107] text-slate-900 text-[11px] px-2.5 py-1 rounded-full shadow-sm" style={{ fontWeight: 800 }}>
+                        <Crown className="w-3 h-3 fill-slate-900" /> Pro
+                      </span>
+                    )}
+                  </div>
                   <p className="text-slate-500 dark:text-slate-400 text-sm" style={{ fontWeight: 500 }}>
                     {student.major} · {student.year} · {student.university}
                   </p>
@@ -194,7 +262,7 @@ export function StudentProfile() {
               <MapPin className="w-4 h-4 text-[#38B6FF]" /> {student.location}
             </span>
             {student.whatsappEnabled && (
-              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={handleWhatsAppClick}
                 className="ml-auto bg-[#25D366] text-white px-5 py-2.5 rounded-full flex items-center gap-2 hover:bg-[#20bd5a] transition-all hover:scale-105 active:scale-95 shadow-md shadow-green-400/25"
                 style={{ fontWeight: 700 }}>
                 <MessageCircle className="w-4 h-4" />
@@ -205,13 +273,13 @@ export function StudentProfile() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Main */}
+          {/* Main content */}
           <div className="lg:col-span-2 space-y-5">
             {/* Tabs */}
             <div className="bg-white dark:bg-slate-800/80 rounded-2xl p-1.5 shadow-sm border border-white/60 dark:border-slate-700/40 flex gap-1">
               {(["portfolio", "experience", "reviews"] as const).map((tab) => (
                 <button key={tab} onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-2.5 rounded-xl text-sm capitalize transition-all relative ${
+                  className={`flex-1 py-2.5 rounded-xl text-sm capitalize transition-all ${
                     activeTab === tab
                       ? "bg-[#38B6FF] text-white shadow-md shadow-[#38B6FF]/30"
                       : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
@@ -287,62 +355,60 @@ export function StudentProfile() {
               <div className="space-y-4">
                 <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-7 space-y-4">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Client Reviews</h2>
+                    <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Reviews</h2>
                     {satisfactionRate !== null && (
-                      <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-full text-sm" style={{ fontWeight: 700 }}>
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        {satisfactionRate}% satisfaction
-                      </div>
+                      <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs px-3 py-1.5 rounded-full" style={{ fontWeight: 700 }}>
+                        {satisfactionRate}% satisfied
+                      </span>
                     )}
                   </div>
-
-                  {reviews.length > 0 ? reviews.map((review) => (
-                    <div key={review.id} className="bg-blue-50/80 dark:bg-slate-700/50 rounded-2xl p-5 border border-blue-100/30 dark:border-slate-600/30">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <p className="text-slate-900 dark:text-white" style={{ fontWeight: 700 }}>{review.author}</p>
-                          <p className="text-slate-400 dark:text-slate-500 text-xs" style={{ fontWeight: 500 }}>{review.role}</p>
+                  {reviews.length === 0 ? (
+                    <p className="text-slate-400 dark:text-slate-500 text-sm text-center py-6" style={{ fontWeight: 500 }}>No reviews yet.</p>
+                  ) : (
+                    reviews.map((r) => (
+                      <div key={r.id} className="border border-blue-50 dark:border-slate-700/60 rounded-2xl p-5">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <p className="text-slate-900 dark:text-white text-sm" style={{ fontWeight: 700 }}>{r.author}</p>
+                            <p className="text-slate-400 dark:text-slate-500 text-xs" style={{ fontWeight: 500 }}>{r.role} · {r.date}</p>
+                          </div>
+                          <div className="flex gap-0.5">
+                            {[1, 2, 3, 4, 5].map((n) => (
+                              <Star key={n} className={`w-4 h-4 ${n <= r.rating ? "text-[#FFC107] fill-[#FFC107]" : "text-slate-200 dark:text-slate-600"}`} />
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex gap-0.5">
-                          {[1, 2, 3, 4, 5].map((i) => (
-                            <Star key={i} className={`w-4 h-4 ${i <= review.rating ? "text-[#FFC107] fill-[#FFC107]" : "text-slate-200 dark:text-slate-600"}`} />
-                          ))}
-                        </div>
+                        <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed" style={{ fontWeight: 500 }}>{r.comment}</p>
                       </div>
-                      <p className="text-slate-600 dark:text-slate-300 text-sm italic leading-relaxed" style={{ fontWeight: 500 }}>"{review.comment}"</p>
-                      <p className="text-slate-400 dark:text-slate-500 text-xs mt-2" style={{ fontWeight: 500 }}>{review.date}</p>
-                    </div>
-                  )) : (
-                    <p className="text-slate-500 dark:text-slate-400 text-sm text-center py-6" style={{ fontWeight: 500 }}>No reviews yet — be the first!</p>
+                    ))
                   )}
                 </div>
 
-                {/* Review submission form */}
                 {canReview && (
                   <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-7">
                     <h3 className="text-slate-900 dark:text-white mb-4" style={{ fontWeight: 800 }}>Leave a Review</h3>
                     <form onSubmit={handleReviewSubmit} className="space-y-4">
                       <div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2" style={{ fontWeight: 700 }}>YOUR RATING</p>
+                        <label className="block text-slate-700 dark:text-slate-300 text-sm mb-2" style={{ fontWeight: 600 }}>Rating</label>
                         <StarPicker value={reviewRating} onChange={setReviewRating} />
                       </div>
                       <div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2" style={{ fontWeight: 700 }}>YOUR ROLE / COMPANY <span className="text-slate-300 dark:text-slate-600 font-normal">(optional)</span></p>
+                        <label className="block text-slate-700 dark:text-slate-300 text-sm mb-1.5" style={{ fontWeight: 600 }}>Your Role</label>
                         <input type="text" value={reviewRole} onChange={(e) => setReviewRole(e.target.value)}
-                          placeholder="e.g. Marketing Manager at XYZ"
-                          className="w-full bg-blue-50/80 dark:bg-slate-700/50 border border-blue-100/50 dark:border-slate-600/50 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#38B6FF]/25 text-slate-900 dark:text-white placeholder:text-slate-400"
-                          style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
+                          placeholder="e.g. Marketing Manager, Startup Founder…"
+                          className="w-full bg-blue-50/50 dark:bg-slate-700/50 rounded-xl px-4 py-2.5 text-slate-800 dark:text-white placeholder:text-slate-400 border border-blue-100/50 dark:border-slate-600/40 outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-sm"
+                          style={{ fontWeight: 500 }} />
                       </div>
                       <div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2" style={{ fontWeight: 700 }}>YOUR REVIEW</p>
-                        <textarea rows={3} value={reviewComment} onChange={(e) => setReviewComment(e.target.value)}
-                          placeholder="Share your experience working with this student…"
-                          required
-                          className="w-full bg-blue-50/80 dark:bg-slate-700/50 border border-blue-100/50 dark:border-slate-600/50 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#38B6FF]/25 text-slate-900 dark:text-white placeholder:text-slate-400 resize-none"
-                          style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
+                        <label className="block text-slate-700 dark:text-slate-300 text-sm mb-1.5" style={{ fontWeight: 600 }}>Review</label>
+                        <textarea value={reviewComment} onChange={(e) => setReviewComment(e.target.value)}
+                          placeholder={`Share your experience working with ${student.name.split(" ")[0]}…`}
+                          rows={4}
+                          className="w-full bg-blue-50/50 dark:bg-slate-700/50 rounded-xl px-4 py-2.5 text-slate-800 dark:text-white placeholder:text-slate-400 border border-blue-100/50 dark:border-slate-600/40 outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-sm resize-none"
+                          style={{ fontWeight: 500 }} />
                       </div>
                       <button type="submit" disabled={submitting || !reviewComment.trim()}
-                        className="w-full flex items-center justify-center gap-2 bg-[#FFC107] text-slate-900 py-3.5 rounded-2xl shadow-md shadow-amber-300/25 hover:bg-[#FFD000] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 bg-[#38B6FF] text-white px-6 py-3 rounded-2xl hover:bg-[#1a9fe8] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-[#38B6FF]/25 hover:scale-[1.02] active:scale-[0.98]"
                         style={{ fontWeight: 700 }}>
                         {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                         {submitting ? "Submitting…" : "Submit Review"}
@@ -360,7 +426,7 @@ export function StudentProfile() {
 
                 {!user && (
                   <div className="bg-blue-50/80 dark:bg-slate-700/50 rounded-2xl p-5 text-center border border-blue-100/30 dark:border-slate-600/30">
-                    <p className="text-slate-600 dark:text-slate-300 text-sm mb-3" style={{ fontWeight: 500 }}>
+                    <p className="text-slate-600 dark:text-slate-300 text-sm" style={{ fontWeight: 500 }}>
                       Sign in to leave a review for {student.name.split(" ")[0]}.
                     </p>
                   </div>
@@ -371,16 +437,14 @@ export function StudentProfile() {
 
           {/* Sidebar */}
           <div className="space-y-5">
+            {/* Profile Stats */}
             <div className="bg-gradient-to-br from-[#38B6FF] to-[#1a6fcc] rounded-3xl p-6 text-white shadow-xl shadow-blue-400/20 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/10 -translate-y-1/2 translate-x-1/2" />
               <h3 className="mb-5" style={{ fontWeight: 800 }}>Profile Stats</h3>
               <div className="space-y-4">
                 {[
                   { value: `${student.completedGigs}+`, label: "Completed Projects" },
-                  {
-                    value: satisfactionRate !== null ? `${satisfactionRate}%` : "New",
-                    label: "Satisfaction Rate",
-                  },
+                  { value: satisfactionRate !== null ? `${satisfactionRate}%` : "New", label: "Satisfaction Rate" },
                   { value: student.education.gpa.split(" ")[0], label: "Academic GPA" },
                 ].map((stat, i) => (
                   <div key={i} className={i > 0 ? "border-t border-white/20 pt-4" : ""}>
@@ -391,6 +455,7 @@ export function StudentProfile() {
               </div>
             </div>
 
+            {/* Get in Touch */}
             <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-6">
               <h3 className="text-slate-900 dark:text-white mb-4" style={{ fontWeight: 800 }}>Get in Touch</h3>
               <div className="space-y-3 mb-5">
@@ -406,7 +471,7 @@ export function StudentProfile() {
                 ))}
               </div>
               {student.whatsappEnabled && (
-                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
+                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={handleWhatsAppClick}
                   className="flex items-center justify-center gap-2 w-full bg-[#25D366] text-white py-3 rounded-2xl hover:bg-[#20bd5a] transition-all shadow-md shadow-green-400/20 hover:scale-[1.02] active:scale-[0.98]"
                   style={{ fontWeight: 700 }}>
                   <MessageCircle className="w-5 h-5" />
@@ -415,21 +480,126 @@ export function StudentProfile() {
               )}
             </div>
 
+            {/* Book now */}
             <div className="bg-[#FFC107] rounded-3xl p-6 shadow-lg shadow-amber-300/25">
               <p className="text-slate-900 mb-1" style={{ fontWeight: 800 }}>Ready to collaborate?</p>
               {student.hourlyRate && (
                 <p className="text-slate-700 text-sm mb-4" style={{ fontWeight: 500 }}>Starting at {student.hourlyRate}</p>
               )}
-              {student.whatsappEnabled ? (
-                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
-                  className="block w-full text-center bg-slate-900 text-white py-3 rounded-2xl hover:bg-slate-800 transition-colors"
-                  style={{ fontWeight: 700 }}>
-                  Book {student.name.split(" ")[0]}
-                </a>
+              <a
+                href={`mailto:${student.email}?subject=Project%20Inquiry%20via%20Skillz%20Campus&body=Hi%20${encodeURIComponent(student.name.split(" ")[0])}%2C%20I%20found%20your%20profile%20on%20Skillz%20Campus%20and%20I%27d%20like%20to%20work%20with%20you.%20Are%20you%20available%3F`}
+                className="block w-full text-center bg-slate-900 text-white py-3 rounded-2xl hover:bg-slate-800 transition-colors"
+                style={{ fontWeight: 700 }}>
+                Book {student.name.split(" ")[0]}
+              </a>
+            </div>
+
+            {/* Booking Calendar */}
+            <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-6">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#38B6FF] to-[#1a9fe8] flex items-center justify-center shadow-sm">
+                  <Calendar className="w-4 h-4 text-white" />
+                </div>
+                <h3 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Book a Consultation</h3>
+              </div>
+
+              {isOwn ? (
+                <div>
+                  {!showAvailForm ? (
+                    <div>
+                      {student.availability?.days?.length ? (
+                        <div>
+                          <p className="text-slate-500 dark:text-slate-400 text-xs mb-2" style={{ fontWeight: 500 }}>Your availability:</p>
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {student.availability.days.map((d) => (
+                              <span key={d} className="bg-blue-50 dark:bg-blue-900/20 text-[#38B6FF] text-xs px-2.5 py-1 rounded-lg" style={{ fontWeight: 600 }}>{d}</span>
+                            ))}
+                          </div>
+                          <p className="text-slate-400 dark:text-slate-500 text-xs" style={{ fontWeight: 500 }}>
+                            {student.availability.startTime} – {student.availability.endTime}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-slate-400 dark:text-slate-500 text-sm" style={{ fontWeight: 500 }}>No availability set yet.</p>
+                      )}
+                      <button onClick={() => setShowAvailForm(true)}
+                        className="mt-3 text-[#38B6FF] text-sm hover:text-[#1a9fe8] transition-colors"
+                        style={{ fontWeight: 600 }}>
+                        {student.availability?.days?.length ? "Edit" : "Set"} Availability
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleSaveAvailability} className="space-y-3">
+                      <div>
+                        <p className="text-slate-700 dark:text-slate-300 text-xs mb-2" style={{ fontWeight: 600 }}>Available days</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {DAYS_OF_WEEK.map((day) => (
+                            <button key={day} type="button"
+                              onClick={() => setAvailDays((prev) =>
+                                prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+                              )}
+                              className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${
+                                availDays.includes(day)
+                                  ? "bg-[#38B6FF] text-white"
+                                  : "bg-blue-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400"
+                              }`}
+                              style={{ fontWeight: 600 }}>
+                              {day}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-slate-700 dark:text-slate-300 text-xs mb-1" style={{ fontWeight: 600 }}>From</p>
+                          <select value={availStart} onChange={(e) => setAvailStart(e.target.value)}
+                            className="w-full bg-blue-50/50 dark:bg-slate-700/50 rounded-xl px-2 py-2 text-slate-800 dark:text-white text-xs border border-blue-100/50 dark:border-slate-600/40 outline-none"
+                            style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}>
+                            {TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <p className="text-slate-700 dark:text-slate-300 text-xs mb-1" style={{ fontWeight: 600 }}>To</p>
+                          <select value={availEnd} onChange={(e) => setAvailEnd(e.target.value)}
+                            className="w-full bg-blue-50/50 dark:bg-slate-700/50 rounded-xl px-2 py-2 text-slate-800 dark:text-white text-xs border border-blue-100/50 dark:border-slate-600/40 outline-none"
+                            style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}>
+                            {TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="submit" disabled={savingAvail || availDays.length === 0}
+                          className="flex-1 bg-[#38B6FF] text-white py-2 rounded-xl text-xs hover:bg-[#1a9fe8] transition-colors disabled:opacity-50"
+                          style={{ fontWeight: 700 }}>
+                          {savingAvail ? "Saving…" : "Save"}
+                        </button>
+                        <button type="button" onClick={() => setShowAvailForm(false)}
+                          className="px-4 py-2 rounded-xl text-xs text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                          style={{ fontWeight: 600 }}>
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              ) : student.availability?.days?.length ? (
+                <div>
+                  <p className="text-slate-500 dark:text-slate-400 text-xs mb-3" style={{ fontWeight: 500 }}>
+                    {student.availability.startTime} – {student.availability.endTime}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {student.availability.days.map((day) => (
+                      <button key={day} onClick={() => bookDay(day)}
+                        className="bg-blue-50 dark:bg-blue-900/20 text-[#38B6FF] text-xs px-3 py-1.5 rounded-xl hover:bg-[#38B6FF] hover:text-white transition-colors"
+                        style={{ fontWeight: 600 }}>
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-slate-400 dark:text-slate-500 text-[11px]" style={{ fontWeight: 500 }}>Tap a day to request a slot via WhatsApp or email</p>
+                </div>
               ) : (
-                <button className="w-full bg-slate-900 text-white py-3 rounded-2xl hover:bg-slate-800 transition-colors" style={{ fontWeight: 700 }}>
-                  Book {student.name.split(" ")[0]}
-                </button>
+                <p className="text-slate-400 dark:text-slate-500 text-sm" style={{ fontWeight: 500 }}>Availability not set yet.</p>
               )}
             </div>
           </div>

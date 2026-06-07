@@ -1,23 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!DOCTYPE html>
-  <html lang="en">
-    <head>
-      
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>Skillz | Campus Talent Marketplace</title>
-      <meta name="description" content="Skillz connects Nigerian students with local businesses and organizations through verified profiles, campus gigs, and a modern talent marketplace." />
-      <meta name="robots" content="index, follow" />
-      <meta name="theme-color" content="#38B6FF" />
-      <style>html, body { height: 100%; margin: 0; } #root { height: 100%; }</style>
-      
-    </head>
+    <!-- Primary Meta Tags -->
+    <title>Skillz | Campus Talent Marketplace for Nigerian Students</title>
+    <meta name="title" content="Skillz | Campus Talent Marketplace for Nigerian Students" />
+    <meta name="description" content="Skillz connects Nigerian university students with local businesses through verified skill profiles, campus gigs, and a trusted talent marketplace. Find designers, developers, writers & more." />
+    <meta name="keywords" content="campus marketplace Nigeria, student freelancers Nigeria, Nigerian student gigs, university talent Nigeria, campus skills marketplace, hire student Nigeria, freelance students Lagos Abuja" />
+    <meta name="author" content="Skillz Campus" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#38B6FF" />
+    <meta name="application-name" content="Skillz Campus" />
 
-    <body>
-      
-      <div id="root"></div>
-      <script type="module" src="/src/main.tsx"></script>
-      
-    </body>
-  </html>
-  
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://skillz.campus/" />
+    <meta property="og:title" content="Skillz | Campus Talent Marketplace for Nigerian Students" />
+    <meta property="og:description" content="Discover verified student talent at Nigerian universities. Find designers, developers, photographers, writers and more — or showcase your skills and land real campus gigs." />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="Skillz Campus" />
+    <meta property="og:locale" content="en_NG" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://skillz.campus/" />
+    <meta name="twitter:title" content="Skillz | Campus Talent Marketplace" />
+    <meta name="twitter:description" content="Nigeria's #1 campus talent marketplace. Verified student profiles, real gigs, instant WhatsApp contact. 2,500+ students ready to work." />
+    <meta name="twitter:image" content="/og-image.png" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://skillz.campus/" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Skillz Campus",
+      "url": "https://skillz.campus/",
+      "description": "Nigeria's campus talent marketplace connecting university students with real freelance opportunities.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://skillz.campus/profiles?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Skillz Campus",
+      "url": "https://skillz.campus/",
+      "email": "skillz@zohomail.com",
+      "description": "Nigerian campus talent marketplace for university students.",
+      "foundingLocation": "Nigeria",
+      "sameAs": []
+    }
+    </script>
+
+    <style>
+      html, body { height: 100%; margin: 0; }
+      #root { height: 100%; }
+      @keyframes slideUp {
+        from { opacity: 0; transform: translateY(24px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

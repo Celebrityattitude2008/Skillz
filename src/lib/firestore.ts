@@ -1,6 +1,6 @@
 import {
   collection, doc, getDocs, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
-  query, where,
+  query, where, onSnapshot, orderBy, increment as fsIncrement, limit,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from './firebase';
@@ -47,6 +47,10 @@ export interface StudentProfile {
   role: string;
   joinDate: string;
   gigs: number;
+  isPro?: boolean;
+  availability?: { days: string[]; startTime: string; endTime: string };
+  profileViews?: number;
+  whatsappClicks?: number;
 }
 
 export interface Application {
@@ -182,7 +186,25 @@ export async function getApplicationsByStudent(studentId: string): Promise<Appli
 }
 
 export async function updateApplicationStatus(id: string, status: 'Pending' | 'Accepted' | 'Rejected') {
-  return updateDoc(doc(db, 'applications', id), { status });
+  await updateDoc(doc(db, 'applications', id), { status });
+  if (status === 'Accepted' || status === 'Rejected') {
+    try {
+      const appSnap = await getDoc(doc(db, 'applications', id));
+      if (appSnap.exists()) {
+        const app = appSnap.data() as Application;
+        await addDoc(collection(db, 'notifications'), {
+          userId: app.studentId,
+          type: status === 'Accepted' ? 'application_accepted' : 'application_rejected',
+          message: status === 'Accepted'
+            ? `🎉 Your application for "${app.gigTitle}" was accepted!`
+            : `Your application for "${app.gigTitle}" was not selected this time.`,
+          link: '/dashboard',
+          read: false,
+          createdAt: Date.now(),
+        });
+      }
+    } catch { /* don't block status update */ }
+  }
 }
 
 // ── Verification ──────────────────────────────────────────────────────────────
@@ -296,4 +318,53 @@ export async function addReview(
   const avgRating =
     Math.round((updated.reduce((s, r) => s + r.rating, 0) / updated.length) * 10) / 10;
   await updateDoc(studentRef, { reviews: updated, rating: avgRating });
+  try {
+    if (data.uid) {
+      await addDoc(collection(db, 'notifications'), {
+        userId: data.uid,
+        type: 'new_review',
+        message: `⭐ ${review.author} left you a ${review.rating}-star review!`,
+        link: `/profile/${studentId}`,
+        read: false,
+        createdAt: Date.now(),
+      });
+    }
+  } catch { /* silent */ }
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+export interface AppNotification {
+  id?: string;
+  userId: string;
+  type: 'application_accepted' | 'application_rejected' | 'new_review' | 'new_gig';
+  message: string;
+  link?: string;
+  read: boolean;
+  createdAt: number;
+}
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+export async function incrementProfileView(studentId: string): Promise<void> {
+  try { await updateDoc(doc(db, 'students', studentId), { profileViews: fsIncrement(1) }); } catch { /* silent */ }
+}
+
+export async function incrementWhatsAppClick(studentId: string): Promise<void> {
+  try { await updateDoc(doc(db, 'students', studentId), { whatsappClicks: fsIncrement(1) }); } catch { /* silent */ }
+}
+
+// ── Student lookup by email (dashboard fallback) ──────────────────────────────
+export async function getStudentByEmail(email: string): Promise<StudentProfile | null> {
+  const q = query(collection(db, 'students'), where('email', '==', email));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return { id: d.id, ...d.data() } as StudentProfile;
+}
+
+// ── Availability ──────────────────────────────────────────────────────────────
+export async function updateAvailability(
+  studentId: string,
+  availability: { days: string[]; startTime: string; endTime: string }
+): Promise<void> {
+  await updateDoc(doc(db, 'students', studentId), { availability });
 }

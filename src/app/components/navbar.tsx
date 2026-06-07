@@ -1,10 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router";
-import { Zap, Menu, X, LogOut, User, ChevronDown, Shield, Edit, Sun, Moon } from "lucide-react";
+import { Zap, Menu, X, LogOut, User, ChevronDown, Shield, Edit, Sun, Moon, LayoutDashboard } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "firebase/auth";
 import { auth, ADMIN_EMAIL } from "../../lib/firebase";
 import { useAuth } from "../../lib/auth-context";
 import { useTheme } from "../../lib/theme-context";
+import { NotificationBell } from "./notification-bell";
+import { ProUpgradeModal } from "./pro-upgrade-modal";
 
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -107,6 +109,7 @@ export function Navbar() {
             {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
+          {user && <NotificationBell />}
           {user ? (
             <div className="relative" ref={dropdownRef}>
               <button
@@ -138,6 +141,12 @@ export function Navbar() {
                       Admin Panel
                     </Link>
                   )}
+                  <Link to="/dashboard" onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700/60 transition-colors"
+                    style={{ fontWeight: 600 }}>
+                    <LayoutDashboard className="w-4 h-4 text-[#38B6FF]" />
+                    My Dashboard
+                  </Link>
                   <Link to="/profile/me" onClick={() => setDropdownOpen(false)}
                     className="flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700/60 transition-colors"
                     style={{ fontWeight: 600 }}>
@@ -191,6 +200,8 @@ export function Navbar() {
           </button>
         </div>
       </div>
+
+      <ProUpgradeModal />
 
       {/* Mobile menu */}
       {menuOpen && (

@@ -2,11 +2,11 @@ import { Navbar } from "../components/navbar";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import {
   Briefcase, CheckCircle, Clock, XCircle, Star, TrendingUp, User,
-  FileText, Zap, ChevronRight, Loader2, AlertCircle,
+  FileText, Zap, ChevronRight, Loader2, AlertCircle, Crown, Eye, MessageCircle, BarChart2,
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router";
-import { getStudentByUid, getApplicationsByStudent, type StudentProfile, type Application } from "../../lib/firestore";
+import { getStudentByUid, getStudentByEmail, getApplicationsByStudent, type StudentProfile, type Application } from "../../lib/firestore";
 import { useAuth } from "../../lib/auth-context";
 
 function completionScore(s: StudentProfile): { score: number; items: { label: string; done: boolean; pts: number }[] } {
@@ -49,7 +49,11 @@ export function DashboardPage() {
     if (!user) return;
     setLoading(true);
     Promise.all([
-      getStudentByUid(user.uid),
+      getStudentByUid(user.uid).then(async (s) => {
+        if (s) return s;
+        if (user.email) return getStudentByEmail(user.email);
+        return null;
+      }),
       getApplicationsByStudent(user.uid),
     ]).then(([s, apps]) => {
       setStudent(s);
@@ -116,7 +120,14 @@ export function DashboardPage() {
             </div>
             <div>
               <p className="text-white/70 text-sm mb-0.5" style={{ fontWeight: 500 }}>Welcome back 👋</p>
-              <h1 className="text-white text-3xl" style={{ fontWeight: 900 }}>{student.name}</h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-white text-3xl" style={{ fontWeight: 900 }}>{student.name}</h1>
+                {student.isPro && (
+                  <span className="flex items-center gap-1 bg-[#FFC107] text-slate-900 text-xs px-2.5 py-1 rounded-full shadow-lg" style={{ fontWeight: 800 }}>
+                    <Crown className="w-3 h-3 fill-slate-900" /> Pro
+                  </span>
+                )}
+              </div>
               <p className="text-white/80 text-sm" style={{ fontWeight: 500 }}>{student.major} · {student.university}</p>
             </div>
             <div className="ml-auto hidden sm:flex gap-3">
@@ -160,6 +171,49 @@ export function DashboardPage() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Analytics row */}
+        <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center shadow-sm">
+                <BarChart2 className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h2 className="text-slate-900 dark:text-white text-sm" style={{ fontWeight: 800 }}>Profile Analytics</h2>
+                <p className="text-slate-400 dark:text-slate-500 text-xs" style={{ fontWeight: 500 }}>How people are finding you</p>
+              </div>
+            </div>
+            {!student.isPro && (
+              <a href="mailto:skillz@zohomail.com?subject=Pro%20Upgrade%20Request"
+                className="flex items-center gap-1 bg-[#FFC107]/10 text-[#FFC107] text-xs px-3 py-1.5 rounded-full hover:bg-[#FFC107]/20 transition-colors"
+                style={{ fontWeight: 700 }}>
+                <Crown className="w-3 h-3 fill-[#FFC107]" /> Upgrade to Pro
+              </a>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { Icon: Eye, value: student.profileViews ?? 0, label: "Profile Views", color: "text-[#38B6FF]", bg: "bg-blue-50 dark:bg-blue-900/20" },
+              { Icon: MessageCircle, value: student.whatsappClicks ?? 0, label: "WhatsApp Clicks", color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
+              {
+                Icon: TrendingUp,
+                value: applications.length > 0 ? `${Math.round((accepted.length / applications.length) * 100)}%` : "—",
+                label: "Success Rate",
+                color: "text-violet-500",
+                bg: "bg-violet-50 dark:bg-violet-900/20",
+              },
+            ].map((s) => (
+              <div key={s.label} className={`${s.bg} rounded-2xl p-4 text-center`}>
+                <div className={`w-8 h-8 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center mx-auto mb-2 shadow-sm`}>
+                  <s.Icon className={`w-4 h-4 ${s.color}`} />
+                </div>
+                <p className="text-slate-900 dark:text-white text-lg" style={{ fontWeight: 900 }}>{s.value}</p>
+                <p className="text-slate-500 dark:text-slate-400 text-[11px]" style={{ fontWeight: 500 }}>{s.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">

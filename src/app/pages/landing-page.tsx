@@ -350,6 +350,52 @@ export function LandingPage() {
         </section>
       )}
 
+      {/* Go Pro Section */}
+      <section className="max-w-6xl mx-auto px-6 py-12">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-8 md:p-12 relative overflow-hidden border border-slate-700/50">
+          <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-[#FFC107]/5 -translate-y-1/2 translate-x-1/2 blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-[#38B6FF]/5 translate-y-1/2 -translate-x-1/2 blur-3xl" />
+          <div className="relative">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FFC107] to-[#ff9f00] flex items-center justify-center shadow-lg shadow-amber-400/30">
+                <Zap className="w-5 h-5 text-white fill-white" />
+              </div>
+              <span className="bg-[#FFC107]/20 text-[#FFC107] text-xs px-3 py-1 rounded-full uppercase tracking-wider" style={{ fontWeight: 800 }}>New — Skillz Pro</span>
+            </div>
+            <h2 className="text-white text-2xl md:text-3xl mb-2" style={{ fontWeight: 900 }}>
+              Stand out. Get hired faster.
+            </h2>
+            <p className="text-slate-400 mb-8 max-w-lg" style={{ fontWeight: 500 }}>
+              Upgrade to Pro for ₦2,000/month and unlock features that put your profile front and centre.
+            </p>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              {[
+                { emoji: "👑", title: "Gold Pro Badge", desc: "Verified crown on every listing" },
+                { emoji: "🚀", title: "Search Boost", desc: "Appear at the top of results" },
+                { emoji: "📊", title: "Analytics", desc: "See who views your profile" },
+                { emoji: "📅", title: "Booking Calendar", desc: "Let clients book time slots" },
+              ].map((f) => (
+                <div key={f.title} className="bg-white/5 border border-white/10 rounded-2xl p-4 hover:bg-white/8 transition-colors">
+                  <span className="text-2xl mb-2 block">{f.emoji}</span>
+                  <p className="text-white text-sm mb-1" style={{ fontWeight: 700 }}>{f.title}</p>
+                  <p className="text-slate-400 text-xs" style={{ fontWeight: 500 }}>{f.desc}</p>
+                </div>
+              ))}
+            </div>
+            <a
+              href="mailto:skillz@zohomail.com?subject=Pro%20Upgrade%20Request&body=Hi%20Skillz%20team%2C%20I%27d%20like%20to%20upgrade%20to%20Pro."
+              className="inline-flex items-center gap-2 bg-[#FFC107] text-slate-900 px-8 py-4 rounded-full hover:bg-[#FFD000] transition-all shadow-xl shadow-amber-400/20 hover:scale-105 active:scale-95"
+              style={{ fontWeight: 800 }}>
+              <Zap className="w-4 h-4 fill-slate-900" />
+              Upgrade to Pro — ₦2,000/mo
+            </a>
+            <p className="text-slate-500 text-xs mt-3" style={{ fontWeight: 500 }}>
+              Email us at <span className="text-[#38B6FF]">skillz@zohomail.com</span> · Cancel anytime
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* How It Works */}
       <section className="max-w-6xl mx-auto px-6 py-12">
         <h2 className="text-slate-900 dark:text-white text-2xl text-center mb-10" style={{ fontWeight: 900 }}>How It Works</h2>
@@ -395,10 +441,13 @@ export function LandingPage() {
           <p className="text-slate-400 dark:text-slate-500 text-sm" style={{ fontWeight: 500 }}>
             © {new Date().getFullYear()} Skillz Campus. Connecting talent with opportunity.
           </p>
-          <div className="flex gap-4">
-            {["Privacy", "Terms", "Contact"].map((item) => (
+          <div className="flex gap-4 items-center">
+            {["Privacy", "Terms"].map((item) => (
               <span key={item} className="text-slate-400 dark:text-slate-500 text-sm hover:text-[#38B6FF] transition-colors cursor-pointer" style={{ fontWeight: 500 }}>{item}</span>
             ))}
+            <a href="mailto:skillz@zohomail.com" className="text-slate-400 dark:text-slate-500 text-sm hover:text-[#38B6FF] transition-colors" style={{ fontWeight: 500 }}>
+              Contact
+            </a>
           </div>
         </div>
       </footer>

@@ -2,7 +2,7 @@ import { Navbar } from "../components/navbar";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import {
   Search, Star, CheckCircle, Users, SlidersHorizontal, ArrowUpDown,
-  Palette, Code2, PenLine, Camera, Megaphone, LayoutGrid, Loader2, X,
+  Palette, Code2, PenLine, Camera, Megaphone, LayoutGrid, Loader2, X, Crown,
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router";
@@ -100,6 +100,7 @@ export function ProfilesPage() {
       return matchSearch && matchesCategory(s, category) && matchUni && matchBudget(s, budget) && matchVerified;
     });
     list = [...list].sort((a, b) => {
+      if (Number(b.isPro) !== Number(a.isPro)) return Number(b.isPro) - Number(a.isPro);
       if (sort === "rating") return (b.rating || 0) - (a.rating || 0);
       if (sort === "gigs") return (b.completedGigs || 0) - (a.completedGigs || 0);
       return (a.name ?? "").localeCompare(b.name ?? "");
@@ -264,6 +265,12 @@ export function ProfilesPage() {
                 className="group bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm shadow-blue-100/20 dark:shadow-slate-900/30 hover:shadow-xl hover:shadow-blue-200/20 dark:hover:shadow-slate-900/50 transition-all hover:-translate-y-1 overflow-hidden border border-white/60 dark:border-slate-700/40">
                 <div className="relative h-28 bg-gradient-to-br from-[#38B6FF] to-[#1a6fcc]">
                   <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.2)_0%,_transparent_60%)]" />
+                  {s.isPro && (
+                    <div className="absolute top-3 left-3 flex items-center gap-1 bg-[#FFC107] rounded-full px-2.5 py-1 shadow-lg">
+                      <Crown className="w-3 h-3 text-slate-900 fill-slate-900" />
+                      <span className="text-slate-900 text-[11px]" style={{ fontWeight: 800 }}>Pro</span>
+                    </div>
+                  )}
                   {s.verificationStatus === "Verified" ? (
                     <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/25 backdrop-blur-sm rounded-full px-2.5 py-1 border border-white/20">
                       <CheckCircle className="w-3.5 h-3.5 text-white" />
