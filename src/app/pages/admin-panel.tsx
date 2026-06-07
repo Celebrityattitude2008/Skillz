@@ -110,8 +110,8 @@ export function AdminPanel() {
   };
 
   const filteredUsers = users.filter((u) =>
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
+    (u.name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (u.email ?? "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (authLoading) {
