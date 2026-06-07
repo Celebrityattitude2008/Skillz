@@ -8,9 +8,11 @@ import { AuthPage } from "./pages/auth";
 import { ProfileEditor } from "./pages/profile-editor";
 import { TermsPage } from "./pages/terms";
 import { PrivacyPage } from "./pages/privacy";
+import { DashboardPage } from "./pages/dashboard";
 
 export const router = createBrowserRouter([
   { path: "/", Component: HomePage },
+  { path: "/dashboard", Component: DashboardPage },
   { path: "/jobs", Component: JobBoard },
   { path: "/profiles", Component: ProfilesPage },
   { path: "/profile/me", Component: ProfileEditor },

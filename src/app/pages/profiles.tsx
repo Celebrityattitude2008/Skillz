@@ -2,11 +2,12 @@ import { Navbar } from "../components/navbar";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import {
   Search, Star, CheckCircle, Users, SlidersHorizontal, ArrowUpDown,
-  Palette, Code2, PenLine, Camera, Megaphone, LayoutGrid, Loader2,
+  Palette, Code2, PenLine, Camera, Megaphone, LayoutGrid, Loader2, X,
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router";
 import { getStudents, type StudentProfile } from "../../lib/firestore";
+import { NIGERIAN_UNIVERSITIES } from "../../lib/nigerian-universities";
 
 const CATEGORIES = [
   { label: "All", Icon: LayoutGrid },
@@ -38,11 +39,34 @@ const SORT_OPTIONS = [
   { value: "name", label: "A – Z" },
 ];
 
+const BUDGET_OPTIONS = [
+  { value: "all", label: "Any Rate" },
+  { value: "low", label: "Under ₦5k/hr" },
+  { value: "mid", label: "₦5k – ₦20k/hr" },
+  { value: "high", label: "₦20k+/hr" },
+];
+
 const verificationColors: Record<string, string> = {
   Verified: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
   Pending: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   Rejected: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
 };
+
+function parseRate(rateStr?: string): number | null {
+  if (!rateStr) return null;
+  const match = rateStr.replace(/,/g, "").match(/[\d.]+/);
+  return match ? parseFloat(match[0]) : null;
+}
+
+function matchesBudget(student: StudentProfile, budget: string): boolean {
+  if (budget === "all") return true;
+  const rate = parseRate(student.hourlyRate);
+  if (rate === null) return budget === "all";
+  if (budget === "low") return rate < 5000;
+  if (budget === "mid") return rate >= 5000 && rate <= 20000;
+  if (budget === "high") return rate > 20000;
+  return true;
+}
 
 export function ProfilesPage() {
   const [students, setStudents] = useState<StudentProfile[]>([]);
@@ -51,6 +75,10 @@ export function ProfilesPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState("rating");
+  const [university, setUniversity] = useState("");
+  const [budget, setBudget] = useState("all");
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -65,17 +93,33 @@ export function ProfilesPage() {
   const filtered = useMemo(() => {
     let list = students.filter((s) => {
       const q = search.toLowerCase();
-      const matchSearch = !q || s.name.toLowerCase().includes(q) || s.major.toLowerCase().includes(q) ||
-        s.university?.toLowerCase().includes(q) || s.skills.some((sk) => sk.toLowerCase().includes(q)) || s.bio?.toLowerCase().includes(q);
-      return matchSearch && matchesCategory(s, category);
+      const matchSearch = !q || (s.name ?? "").toLowerCase().includes(q) || (s.major ?? "").toLowerCase().includes(q) ||
+        (s.university ?? "").toLowerCase().includes(q) || s.skills.some((sk) => sk.toLowerCase().includes(q)) || (s.bio ?? "").toLowerCase().includes(q);
+      const matchUni = !university || s.university === university;
+      const matchVerified = !verifiedOnly || s.verificationStatus === "Verified";
+      return matchSearch && matchesCategory(s, category) && matchUni && matchBudget(s, budget) && matchVerified;
     });
     list = [...list].sort((a, b) => {
       if (sort === "rating") return (b.rating || 0) - (a.rating || 0);
       if (sort === "gigs") return (b.completedGigs || 0) - (a.completedGigs || 0);
-      return a.name.localeCompare(b.name);
+      return (a.name ?? "").localeCompare(b.name ?? "");
     });
     return list;
-  }, [students, search, category, sort]);
+  }, [students, search, category, sort, university, budget, verifiedOnly]);
+
+  function matchBudget(s: StudentProfile, b: string) { return matchesBudget(s, b); }
+
+  const activeFilterCount = [
+    university !== "",
+    budget !== "all",
+    verifiedOnly,
+  ].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setUniversity("");
+    setBudget("all");
+    setVerifiedOnly(false);
+  };
 
   return (
     <div className="min-h-screen page-bg" style={{ fontFamily: "'Nunito', sans-serif" }}>
@@ -102,7 +146,7 @@ export function ProfilesPage() {
                 className="flex-1 outline-none text-slate-800 dark:text-white placeholder:text-slate-400 bg-transparent text-sm"
                 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
               {search && (
-                <button onClick={() => setSearch("")} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
+                <button onClick={() => setSearch("")} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X className="w-4 h-4" /></button>
               )}
             </div>
           </div>
@@ -115,23 +159,26 @@ export function ProfilesPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
-        {/* Filters */}
-        <div className="flex flex-col gap-3 items-stretch justify-between mb-6 sm:flex-row sm:items-center">
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map(({ label, Icon }) => (
-              <button key={label} onClick={() => setCategory(label)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm whitespace-nowrap transition-all ${
-                  category === label
-                    ? "bg-[#38B6FF] text-white shadow-lg shadow-[#38B6FF]/30"
-                    : "bg-white dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-slate-700 border border-white/60 dark:border-slate-700/40 hover:text-slate-900 dark:hover:text-white"
-                }`}
-                style={{ fontWeight: 600 }}>
-                <Icon className="w-3.5 h-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2 bg-white dark:bg-slate-800/80 rounded-xl px-3 py-2 shadow-sm border border-white/60 dark:border-slate-700/40 w-full sm:w-auto">
+        {/* Skill category pills */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {CATEGORIES.map(({ label, Icon }) => (
+            <button key={label} onClick={() => setCategory(label)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm whitespace-nowrap transition-all ${
+                category === label
+                  ? "bg-[#38B6FF] text-white shadow-lg shadow-[#38B6FF]/30"
+                  : "bg-white dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-slate-700 border border-white/60 dark:border-slate-700/40 hover:text-slate-900 dark:hover:text-white"
+              }`}
+              style={{ fontWeight: 600 }}>
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Filter bar */}
+        <div className="flex flex-wrap gap-3 items-center mb-5">
+          {/* Sort */}
+          <div className="flex items-center gap-2 bg-white dark:bg-slate-800/80 rounded-xl px-3 py-2 shadow-sm border border-white/60 dark:border-slate-700/40">
             <ArrowUpDown className="w-4 h-4 text-slate-400" />
             <select value={sort} onChange={(e) => setSort(e.target.value)}
               className="text-sm text-slate-800 dark:text-slate-200 outline-none bg-transparent"
@@ -139,6 +186,46 @@ export function ProfilesPage() {
               {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
+
+          {/* Budget filter */}
+          <div className="flex items-center gap-2 bg-white dark:bg-slate-800/80 rounded-xl px-3 py-2 shadow-sm border border-white/60 dark:border-slate-700/40">
+            <select value={budget} onChange={(e) => setBudget(e.target.value)}
+              className="text-sm text-slate-800 dark:text-slate-200 outline-none bg-transparent"
+              style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}>
+              {BUDGET_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+
+          {/* University filter */}
+          <div className="flex items-center gap-2 bg-white dark:bg-slate-800/80 rounded-xl px-3 py-2 shadow-sm border border-white/60 dark:border-slate-700/40 flex-1 min-w-[200px] max-w-xs">
+            <select value={university} onChange={(e) => setUniversity(e.target.value)}
+              className="text-sm text-slate-800 dark:text-slate-200 outline-none bg-transparent w-full"
+              style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}>
+              <option value="">All Universities</option>
+              {NIGERIAN_UNIVERSITIES.map((u) => <option key={u} value={u}>{u}</option>)}
+            </select>
+          </div>
+
+          {/* Verified only toggle */}
+          <button onClick={() => setVerifiedOnly(!verifiedOnly)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition-all border ${
+              verifiedOnly
+                ? "bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-300/30"
+                : "bg-white dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 border-white/60 dark:border-slate-700/40 hover:bg-blue-50 dark:hover:bg-slate-700"
+            }`}
+            style={{ fontWeight: 600 }}>
+            <CheckCircle className="w-4 h-4" />
+            Verified
+          </button>
+
+          {/* Clear filters */}
+          {activeFilterCount > 0 && (
+            <button onClick={clearFilters}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+              style={{ fontWeight: 600 }}>
+              <X className="w-3.5 h-3.5" /> Clear ({activeFilterCount})
+            </button>
+          )}
         </div>
 
         <p className="text-slate-500 dark:text-slate-400 text-sm mb-5" style={{ fontWeight: 600 }}>
@@ -161,14 +248,20 @@ export function ProfilesPage() {
               <Search className="w-8 h-8 text-[#38B6FF]" />
             </div>
             <h3 className="text-slate-900 dark:text-white text-lg mb-2" style={{ fontWeight: 800 }}>No students found</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm" style={{ fontWeight: 500 }}>Try adjusting your search or category filter</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-4" style={{ fontWeight: 500 }}>Try adjusting your search or filters</p>
+            {activeFilterCount > 0 && (
+              <button onClick={clearFilters}
+                className="inline-flex items-center gap-2 bg-[#38B6FF] text-white px-5 py-2.5 rounded-xl text-sm hover:bg-[#1a9fe8] transition-colors"
+                style={{ fontWeight: 700 }}>
+                Clear Filters
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {filtered.map((s) => (
               <Link key={s.id} to={`/profile/${s.id}`}
                 className="group bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm shadow-blue-100/20 dark:shadow-slate-900/30 hover:shadow-xl hover:shadow-blue-200/20 dark:hover:shadow-slate-900/50 transition-all hover:-translate-y-1 overflow-hidden border border-white/60 dark:border-slate-700/40">
-                {/* Card top gradient */}
                 <div className="relative h-28 bg-gradient-to-br from-[#38B6FF] to-[#1a6fcc]">
                   <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.2)_0%,_transparent_60%)]" />
                   {s.verificationStatus === "Verified" ? (
@@ -202,7 +295,7 @@ export function ProfilesPage() {
                     {s.major} · {s.year}
                   </p>
                   {s.university && (
-                    <p className="text-[#38B6FF] text-xs mb-3" style={{ fontWeight: 600 }}>{s.university}</p>
+                    <p className="text-[#38B6FF] text-xs mb-3 truncate" style={{ fontWeight: 600 }}>{s.university}</p>
                   )}
 
                   <div className="flex flex-wrap gap-1.5 mb-3">

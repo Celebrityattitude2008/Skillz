@@ -270,3 +270,30 @@ export async function setSpotlightStudent(studentId: string) {
 export async function saveUserProfile(uid: string, data: Partial<StudentProfile>) {
   return setDoc(doc(db, 'users', uid), data, { merge: true });
 }
+
+// ── Reviews ───────────────────────────────────────────────────────────────────
+export interface Review {
+  id: number;
+  author: string;
+  role: string;
+  rating: number;
+  comment: string;
+  date: string;
+  reviewerId?: string;
+}
+
+export async function addReview(
+  studentId: string,
+  review: Omit<Review, 'id'>
+): Promise<void> {
+  const studentRef = doc(db, 'students', studentId);
+  const snap = await getDoc(studentRef);
+  if (!snap.exists()) return;
+  const data = snap.data() as StudentProfile;
+  const current: Review[] = (data.reviews as Review[]) || [];
+  const newReview: Review = { ...review, id: Date.now() };
+  const updated = [...current, newReview];
+  const avgRating =
+    Math.round((updated.reduce((s, r) => s + r.rating, 0) / updated.length) * 10) / 10;
+  await updateDoc(studentRef, { reviews: updated, rating: avgRating });
+}

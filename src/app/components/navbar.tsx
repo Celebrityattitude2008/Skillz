@@ -22,7 +22,9 @@ export function Navbar() {
     { label: "Profiles", to: "/profiles" },
   ];
 
-  if (!user) {
+  if (user) {
+    navLinks.unshift({ label: "Dashboard", to: "/dashboard" });
+  } else {
     navLinks.unshift({ label: "Discover", to: "/" });
   }
 

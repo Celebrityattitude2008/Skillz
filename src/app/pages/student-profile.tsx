@@ -1,16 +1,46 @@
 import { Navbar } from "../components/navbar";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { Mail, Phone, MapPin, Briefcase, Award, MessageCircle, Star, CheckCircle, Loader2 } from "lucide-react";
+import {
+  Mail, Phone, MapPin, Briefcase, Award, MessageCircle, Star,
+  CheckCircle, Loader2, Send,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { useParams } from "react-router";
 import Masonry from "react-responsive-masonry";
-import { getStudentById, getStudents, type StudentProfile as SP } from "../../lib/firestore";
+import {
+  getStudentById, getStudents, addReview,
+  type StudentProfile as SP,
+} from "../../lib/firestore";
+import { useAuth } from "../../lib/auth-context";
+
+function StarPicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const [hover, setHover] = useState(0);
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button key={n} type="button"
+          onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(0)}
+          onClick={() => onChange(n)}
+          className="transition-transform hover:scale-110">
+          <Star className={`w-7 h-7 ${n <= (hover || value) ? "text-[#FFC107] fill-[#FFC107]" : "text-slate-200 dark:text-slate-600"}`} />
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function StudentProfile() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const [student, setStudent] = useState<SP | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"portfolio" | "experience" | "reviews">("portfolio");
+
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewRole, setReviewRole] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -26,6 +56,54 @@ export function StudentProfile() {
     }
     load();
   }, [id]);
+
+  const isOwn = !!(user && student && user.uid === student.uid);
+  const canReview = !!(user && !isOwn && !reviewSubmitted);
+
+  const reviews = (student?.reviews ?? []) as { id: number; author: string; role: string; rating: number; comment: string; date: string }[];
+  const satisfactionRate = reviews.length > 0
+    ? Math.round((reviews.filter((r) => r.rating >= 4).length / reviews.length) * 100)
+    : null;
+
+  const whatsappMessage = student
+    ? encodeURIComponent(`Hi ${student.name.split(" ")[0]}, I found your profile on Skillz Campus and I'd like to discuss a project with you. Are you available?`)
+    : "";
+  const whatsappUrl = student?.whatsappEnabled
+    ? `https://wa.me/${student.whatsappNumber.replace(/\D/g, "")}?text=${whatsappMessage}`
+    : "";
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !student?.id || !reviewComment.trim()) return;
+    setSubmitting(true);
+    try {
+      await addReview(student.id, {
+        author: user.displayName || user.email?.split("@")[0] || "Client",
+        role: reviewRole.trim() || "Client",
+        rating: reviewRating,
+        comment: reviewComment.trim(),
+        date: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+        reviewerId: user.uid,
+      });
+      const newAvg =
+        Math.round(([...reviews, { rating: reviewRating }].reduce((s, r) => s + r.rating, 0) /
+          (reviews.length + 1)) * 10) / 10;
+      setStudent((prev) => prev ? {
+        ...prev,
+        rating: newAvg,
+        reviews: [...reviews, {
+          id: Date.now(), author: user.displayName || user.email?.split("@")[0] || "Client",
+          role: reviewRole.trim() || "Client", rating: reviewRating,
+          comment: reviewComment.trim(),
+          date: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+        }],
+      } : prev);
+      setReviewSubmitted(true);
+      setReviewComment("");
+      setReviewRole("");
+    } catch { /* silent */ }
+    finally { setSubmitting(false); }
+  };
 
   if (loading) {
     return (
@@ -93,9 +171,11 @@ export function StudentProfile() {
                     {student.major} · {student.year} · {student.university}
                   </p>
                 </div>
-                <span className="bg-[#FFC107] text-slate-900 text-xs px-3 py-1.5 rounded-full flex items-center gap-1" style={{ fontWeight: 700 }}>
-                  <Star className="w-3.5 h-3.5 fill-current" /> {student.rating} · Top Rated
-                </span>
+                {student.rating > 0 && (
+                  <span className="bg-[#FFC107] text-slate-900 text-xs px-3 py-1.5 rounded-full flex items-center gap-1" style={{ fontWeight: 700 }}>
+                    <Star className="w-3.5 h-3.5 fill-current" /> {student.rating.toFixed(1)} · {reviews.length} review{reviews.length !== 1 ? "s" : ""}
+                  </span>
+                )}
               </div>
               <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-4" style={{ fontWeight: 500 }}>{student.bio}</p>
               <div className="flex flex-wrap gap-1.5">
@@ -114,12 +194,11 @@ export function StudentProfile() {
               <MapPin className="w-4 h-4 text-[#38B6FF]" /> {student.location}
             </span>
             {student.whatsappEnabled && (
-              <a href={`https://wa.me/${student.whatsappNumber.replace(/\D/g, "")}`}
-                target="_blank" rel="noopener noreferrer"
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
                 className="ml-auto bg-[#25D366] text-white px-5 py-2.5 rounded-full flex items-center gap-2 hover:bg-[#20bd5a] transition-all hover:scale-105 active:scale-95 shadow-md shadow-green-400/25"
                 style={{ fontWeight: 700 }}>
                 <MessageCircle className="w-4 h-4" />
-                WhatsApp
+                Contact on WhatsApp
               </a>
             )}
           </div>
@@ -132,13 +211,18 @@ export function StudentProfile() {
             <div className="bg-white dark:bg-slate-800/80 rounded-2xl p-1.5 shadow-sm border border-white/60 dark:border-slate-700/40 flex gap-1">
               {(["portfolio", "experience", "reviews"] as const).map((tab) => (
                 <button key={tab} onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-2.5 rounded-xl text-sm capitalize transition-all ${
+                  className={`flex-1 py-2.5 rounded-xl text-sm capitalize transition-all relative ${
                     activeTab === tab
                       ? "bg-[#38B6FF] text-white shadow-md shadow-[#38B6FF]/30"
                       : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                   }`}
                   style={{ fontWeight: 600 }}>
                   {tab}
+                  {tab === "reviews" && reviews.length > 0 && (
+                    <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${activeTab === "reviews" ? "bg-white/25" : "bg-[#38B6FF]/10 text-[#38B6FF]"}`}>
+                      {reviews.length}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -200,26 +284,86 @@ export function StudentProfile() {
             )}
 
             {activeTab === "reviews" && (
-              <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-7 space-y-4">
-                <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Client Reviews</h2>
-                {student.reviews.length > 0 ? student.reviews.map((review) => (
-                  <div key={review.id} className="bg-blue-50/80 dark:bg-slate-700/50 rounded-2xl p-5 border border-blue-100/30 dark:border-slate-600/30">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <p className="text-slate-900 dark:text-white" style={{ fontWeight: 700 }}>{review.author}</p>
-                        <p className="text-slate-400 dark:text-slate-500 text-xs" style={{ fontWeight: 500 }}>{review.role}</p>
+              <div className="space-y-4">
+                <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-7 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Client Reviews</h2>
+                    {satisfactionRate !== null && (
+                      <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-full text-sm" style={{ fontWeight: 700 }}>
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        {satisfactionRate}% satisfaction
                       </div>
-                      <div className="flex gap-0.5">
-                        {[...Array(review.rating)].map((_, i) => (
-                          <Star key={i} className="w-4 h-4 text-[#FFC107] fill-[#FFC107]" />
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-slate-600 dark:text-slate-300 text-sm italic leading-relaxed" style={{ fontWeight: 500 }}>"{review.comment}"</p>
-                    <p className="text-slate-400 dark:text-slate-500 text-xs mt-2" style={{ fontWeight: 500 }}>{review.date}</p>
+                    )}
                   </div>
-                )) : (
-                  <p className="text-slate-500 dark:text-slate-400 text-sm text-center py-8" style={{ fontWeight: 500 }}>No reviews yet.</p>
+
+                  {reviews.length > 0 ? reviews.map((review) => (
+                    <div key={review.id} className="bg-blue-50/80 dark:bg-slate-700/50 rounded-2xl p-5 border border-blue-100/30 dark:border-slate-600/30">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <p className="text-slate-900 dark:text-white" style={{ fontWeight: 700 }}>{review.author}</p>
+                          <p className="text-slate-400 dark:text-slate-500 text-xs" style={{ fontWeight: 500 }}>{review.role}</p>
+                        </div>
+                        <div className="flex gap-0.5">
+                          {[1, 2, 3, 4, 5].map((i) => (
+                            <Star key={i} className={`w-4 h-4 ${i <= review.rating ? "text-[#FFC107] fill-[#FFC107]" : "text-slate-200 dark:text-slate-600"}`} />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-slate-600 dark:text-slate-300 text-sm italic leading-relaxed" style={{ fontWeight: 500 }}>"{review.comment}"</p>
+                      <p className="text-slate-400 dark:text-slate-500 text-xs mt-2" style={{ fontWeight: 500 }}>{review.date}</p>
+                    </div>
+                  )) : (
+                    <p className="text-slate-500 dark:text-slate-400 text-sm text-center py-6" style={{ fontWeight: 500 }}>No reviews yet — be the first!</p>
+                  )}
+                </div>
+
+                {/* Review submission form */}
+                {canReview && (
+                  <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-7">
+                    <h3 className="text-slate-900 dark:text-white mb-4" style={{ fontWeight: 800 }}>Leave a Review</h3>
+                    <form onSubmit={handleReviewSubmit} className="space-y-4">
+                      <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2" style={{ fontWeight: 700 }}>YOUR RATING</p>
+                        <StarPicker value={reviewRating} onChange={setReviewRating} />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2" style={{ fontWeight: 700 }}>YOUR ROLE / COMPANY <span className="text-slate-300 dark:text-slate-600 font-normal">(optional)</span></p>
+                        <input type="text" value={reviewRole} onChange={(e) => setReviewRole(e.target.value)}
+                          placeholder="e.g. Marketing Manager at XYZ"
+                          className="w-full bg-blue-50/80 dark:bg-slate-700/50 border border-blue-100/50 dark:border-slate-600/50 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#38B6FF]/25 text-slate-900 dark:text-white placeholder:text-slate-400"
+                          style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2" style={{ fontWeight: 700 }}>YOUR REVIEW</p>
+                        <textarea rows={3} value={reviewComment} onChange={(e) => setReviewComment(e.target.value)}
+                          placeholder="Share your experience working with this student…"
+                          required
+                          className="w-full bg-blue-50/80 dark:bg-slate-700/50 border border-blue-100/50 dark:border-slate-600/50 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#38B6FF]/25 text-slate-900 dark:text-white placeholder:text-slate-400 resize-none"
+                          style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
+                      </div>
+                      <button type="submit" disabled={submitting || !reviewComment.trim()}
+                        className="w-full flex items-center justify-center gap-2 bg-[#FFC107] text-slate-900 py-3.5 rounded-2xl shadow-md shadow-amber-300/25 hover:bg-[#FFD000] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ fontWeight: 700 }}>
+                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        {submitting ? "Submitting…" : "Submit Review"}
+                      </button>
+                    </form>
+                  </div>
+                )}
+
+                {reviewSubmitted && (
+                  <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-2xl px-5 py-4 border border-emerald-200/40 dark:border-emerald-800/30">
+                    <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                    <p style={{ fontWeight: 600 }}>Thanks for your review! It's now live on this profile.</p>
+                  </div>
+                )}
+
+                {!user && (
+                  <div className="bg-blue-50/80 dark:bg-slate-700/50 rounded-2xl p-5 text-center border border-blue-100/30 dark:border-slate-600/30">
+                    <p className="text-slate-600 dark:text-slate-300 text-sm mb-3" style={{ fontWeight: 500 }}>
+                      Sign in to leave a review for {student.name.split(" ")[0]}.
+                    </p>
+                  </div>
                 )}
               </div>
             )}
@@ -233,7 +377,10 @@ export function StudentProfile() {
               <div className="space-y-4">
                 {[
                   { value: `${student.completedGigs}+`, label: "Completed Projects" },
-                  { value: "100%", label: "Satisfaction Rate" },
+                  {
+                    value: satisfactionRate !== null ? `${satisfactionRate}%` : "New",
+                    label: "Satisfaction Rate",
+                  },
                   { value: student.education.gpa.split(" ")[0], label: "Academic GPA" },
                 ].map((stat, i) => (
                   <div key={i} className={i > 0 ? "border-t border-white/20 pt-4" : ""}>
@@ -259,12 +406,11 @@ export function StudentProfile() {
                 ))}
               </div>
               {student.whatsappEnabled && (
-                <a href={`https://wa.me/${student.whatsappNumber.replace(/\D/g, "")}`}
-                  target="_blank" rel="noopener noreferrer"
+                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 w-full bg-[#25D366] text-white py-3 rounded-2xl hover:bg-[#20bd5a] transition-all shadow-md shadow-green-400/20 hover:scale-[1.02] active:scale-[0.98]"
                   style={{ fontWeight: 700 }}>
                   <MessageCircle className="w-5 h-5" />
-                  Message on WhatsApp
+                  Contact on WhatsApp
                 </a>
               )}
             </div>
@@ -274,9 +420,17 @@ export function StudentProfile() {
               {student.hourlyRate && (
                 <p className="text-slate-700 text-sm mb-4" style={{ fontWeight: 500 }}>Starting at {student.hourlyRate}</p>
               )}
-              <button className="w-full bg-slate-900 text-white py-3 rounded-2xl hover:bg-slate-800 transition-colors" style={{ fontWeight: 700 }}>
-                Book {student.name.split(" ")[0]}
-              </button>
+              {student.whatsappEnabled ? (
+                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
+                  className="block w-full text-center bg-slate-900 text-white py-3 rounded-2xl hover:bg-slate-800 transition-colors"
+                  style={{ fontWeight: 700 }}>
+                  Book {student.name.split(" ")[0]}
+                </a>
+              ) : (
+                <button className="w-full bg-slate-900 text-white py-3 rounded-2xl hover:bg-slate-800 transition-colors" style={{ fontWeight: 700 }}>
+                  Book {student.name.split(" ")[0]}
+                </button>
+              )}
             </div>
           </div>
         </div>
