@@ -9,7 +9,7 @@ import { Link } from "react-router";
 import {
   getUsers, updateUser, getPendingVerifications, deleteVerification,
   getFlaggedContent, deleteFlaggedItem, getStudents, setSpotlightStudent,
-  approveVerification,
+  approveVerification, getGigs, deleteGig,
   type AdminUser, type PendingVerification, type FlaggedItem, type StudentProfile,
 } from "../../lib/firestore";
 import { useAuth } from "../../lib/auth-context";
@@ -44,6 +44,8 @@ export function AdminPanel() {
   const [selectedStudent, setSelectedStudent] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [spotlightSaved, setSpotlightSaved] = useState(false);
+  const [cleaningSeeds, setCleaningSeeds] = useState(false);
+  const [seedCleanResult, setSeedCleanResult] = useState<string | null>(null);
 
   const loadAll = async () => {
     setLoading(true);
@@ -85,6 +87,26 @@ export function AdminPanel() {
     await setSpotlightStudent(selectedStudent);
     setSpotlightSaved(true);
     setTimeout(() => setSpotlightSaved(false), 3000);
+  };
+
+  const handleCleanSeedGigs = async () => {
+    if (!window.confirm("This will delete all gigs that have no owner (seed/demo data). Continue?")) return;
+    setCleaningSeeds(true);
+    setSeedCleanResult(null);
+    try {
+      const allGigs = await getGigs();
+      const seedGigs = allGigs.filter((g) => !g.postedBy || g.postedBy.trim() === "");
+      if (seedGigs.length === 0) {
+        setSeedCleanResult("No seed gigs found — nothing to remove.");
+      } else {
+        await Promise.all(seedGigs.map((g) => deleteGig(g.id!)));
+        setSeedCleanResult(`Removed ${seedGigs.length} seed gig${seedGigs.length !== 1 ? "s" : ""} successfully.`);
+      }
+    } catch {
+      setSeedCleanResult("Something went wrong. Check your connection and try again.");
+    } finally {
+      setCleaningSeeds(false);
+    }
   };
 
   const filteredUsers = users.filter((u) =>
@@ -358,6 +380,27 @@ export function AdminPanel() {
         {selectedTab === "moderation" && (
           <div className="space-y-4">
             <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Flagged Content</h2>
+
+            {/* Seed Data Cleanup */}
+            <div className="bg-white dark:bg-slate-800/80 rounded-2xl p-5 shadow-sm border border-amber-200/60 dark:border-amber-700/30">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-slate-900 dark:text-white text-sm" style={{ fontWeight: 700 }}>Remove Seed / Demo Gigs</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5" style={{ fontWeight: 500 }}>Deletes any gigs that have no owner — these are leftover sample data.</p>
+                  {seedCleanResult && (
+                    <p className={`text-xs mt-2 ${seedCleanResult.startsWith("Removed") ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500 dark:text-slate-400"}`} style={{ fontWeight: 600 }}>
+                      {seedCleanResult}
+                    </p>
+                  )}
+                </div>
+                <button onClick={handleCleanSeedGigs} disabled={cleaningSeeds}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs hover:bg-amber-200 dark:hover:bg-amber-900/40 transition-colors disabled:opacity-50 shrink-0"
+                  style={{ fontWeight: 700 }}>
+                  {cleaningSeeds ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  {cleaningSeeds ? "Cleaning…" : "Remove Seed Gigs"}
+                </button>
+              </div>
+            </div>
             {loading ? (
               <div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 text-[#38B6FF] animate-spin" /></div>
             ) : flagged.length === 0 ? (
