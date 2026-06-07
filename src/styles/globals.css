@@ -29,6 +29,55 @@ button, input, textarea, select {
   font: inherit;
 }
 
+/* Shared input style used in profile-editor */
+.input-style {
+  width: 100%;
+  background: #f0f9ff;
+  border-radius: 0.75rem;
+  padding: 0.875rem 1rem;
+  outline: none;
+  font-size: 0.875rem;
+  color: #0f172a;
+  border: 1px solid rgba(56, 182, 255, 0.15);
+  transition: box-shadow 0.15s;
+}
+.input-style::placeholder {
+  color: #94a3b8;
+}
+.input-style:focus {
+  box-shadow: 0 0 0 2px rgba(56, 182, 255, 0.25);
+}
+
+.dark .input-style {
+  background: #162033;
+  color: #e2e8f0;
+  border-color: rgba(56, 182, 255, 0.15);
+}
+.dark .input-style::placeholder {
+  color: #64748b;
+}
+
+/* Page background gradient */
+.page-bg {
+  background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 40%, #eff8ff 100%);
+  min-height: 100vh;
+}
+.dark .page-bg {
+  background: linear-gradient(135deg, #0d1321 0%, #0f1f3d 50%, #0d1321 100%);
+}
+
+/* Glass card */
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+.dark .glass-card {
+  background: rgba(26, 34, 52, 0.85);
+  border: 1px solid rgba(56, 182, 255, 0.1);
+}
+
 @media (max-width: 640px) {
   .max-w-6xl,
   .max-w-5xl,

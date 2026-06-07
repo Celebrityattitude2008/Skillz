@@ -1,607 +1,584 @@
 import { Navbar } from "../components/navbar";
+import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import {
-  User, Camera, Plus, X, Save, Loader2, CheckCircle, Upload,
-  MapPin, Phone, GraduationCap, Briefcase, Link2, DollarSign, ShieldCheck,
+  Plus, Trash2, Save, Camera, Upload, CheckCircle, AlertCircle,
+  Loader2, GraduationCap, Award, Briefcase, X, Palette, Code2,
+  PenLine, ChevronDown, Shield,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import { useAuth } from "../../lib/auth-context";
 import {
-  getStudentByUid, createStudentProfile, updateStudentProfile,
-  submitVerificationRequest,
-  type StudentProfile,
+  getStudentByUid, updateStudentProfile, createStudentProfile,
+  submitVerificationRequest, uploadVerificationId, type StudentProfile,
 } from "../../lib/firestore";
-
-const YEARS = ["Freshman", "Sophomore", "Junior", "Senior", "Graduate"];
-const SKILL_CATEGORIES = ["Design", "Dev", "Marketing", "Photo", "Writing", "Music", "Video", "Other"];
+import { useAuth } from "../../lib/auth-context";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
 type PortfolioItem = { id: number; image: string; title: string; url?: string };
+type ExperienceItem = { role: string; organization: string; period: string; description: string };
 
-const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result === "string") {
-        resolve(result);
-      } else {
-        reject(new Error("Failed to convert file to base64."));
-      }
-    };
-    reader.onerror = () => reject(new Error("Failed to read file."));
-    reader.readAsDataURL(file);
-  });
+const SKILL_SUGGESTIONS = [
+  "React", "TypeScript", "Node.js", "Python", "UI/UX", "Figma", "Branding",
+  "Illustration", "Photography", "Video Editing", "Content Writing", "SEO",
+  "Social Media", "Marketing", "Logo Design", "Animation", "Data Analysis",
+];
+
+const Field = ({ label, children, required }: { label: string; children: React.ReactNode; required?: boolean }) => (
+  <div>
+    <label className="text-xs text-slate-500 dark:text-slate-400 mb-1.5 block" style={{ fontWeight: 700 }}>
+      {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+    </label>
+    {children}
+  </div>
+);
 
 export function ProfileEditor() {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
-
-  const [profileId, setProfileId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [existingId, setExistingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const idFileRef = useRef<HTMLInputElement>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [uploadingImg, setUploadingImg] = useState(false);
+  const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
+  const [error, setError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const portfolioInputRef = useRef<HTMLInputElement>(null);
 
-  // Verification state
-  const [verStatus, setVerStatus] = useState<string>("Pending");
-  const [verStudentId, setVerStudentId] = useState("");
-  const [verSubmitting, setVerSubmitting] = useState(false);
-  const [verSubmitted, setVerSubmitted] = useState(false);
-  const [verIdFile, setVerIdFile] = useState<File | null>(null);
-  const [verIdPreview, setVerIdPreview] = useState<string>("");
-
-  const [form, setForm] = useState({
-    name: "",
-    bio: "",
-    major: "",
-    year: "Sophomore",
-    university: "",
-    location: "",
-    phone: "",
-    hourlyRate: "",
-    whatsappNumber: "",
-    whatsappEnabled: false,
+  const [form, setForm] = useState<Partial<StudentProfile>>({
+    name: "", major: "", year: "", university: "", bio: "", email: "",
+    phone: "", location: "", hourlyRate: "", whatsappEnabled: false, whatsappNumber: "",
+    skills: [], portfolio: [],
+    experience: [{ role: "", organization: "", period: "", description: "" }],
+    education: { degree: "", university: "", period: "", gpa: "" },
     image: "",
   });
-  const [skills, setSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState("");
-  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
+  const [verificationIdNumber, setVerificationIdNumber] = useState("");
+  const [verificationImage, setVerificationImage] = useState<File | null>(null);
+  const [verificationPreview, setVerificationPreview] = useState("");
+  const [verificationLoading, setVerificationLoading] = useState(false);
+  const [verificationError, setVerificationError] = useState("");
+  const [verificationSuccess, setVerificationSuccess] = useState("");
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) { navigate("/auth"); return; }
-    getStudentByUid(user.uid)
-      .then((p) => {
-        if (p) {
-          setProfileId(p.id || null);
-          setForm({
-            name: p.name || user.displayName || "",
-            bio: p.bio || "",
-            major: p.major || "",
-            year: p.year || "Sophomore",
-            university: p.university || "",
-            location: p.location || "",
-            phone: p.phone || "",
-            hourlyRate: p.hourlyRate || "",
-            whatsappNumber: p.whatsappNumber || "",
-            whatsappEnabled: p.whatsappEnabled || false,
-            image: p.image || user.photoURL || "",
-          });
-          setSkills(p.skills || []);
-          setPortfolio(p.portfolio || []);
-        } else {
-          setForm((f) => ({
-            ...f,
-            name: user.displayName || "",
-            image: user.photoURL || "",
-          }));
-          setVerStatus("Pending");
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [user, authLoading, navigate]);
+    if (!user) return;
+    setLoadingProfile(true);
+    getStudentByUid(user.uid).then((data) => {
+      if (data) { setExistingId(data.id!); setForm(data); }
+      else setForm((f) => ({ ...f, name: user.displayName || "", email: user.email || "" }));
+    }).catch(() => {}).finally(() => setLoadingProfile(false));
+  }, [user]);
 
-  const addSkill = () => {
+  const updateField = (key: string, val: unknown) => setForm((f) => ({ ...f, [key]: val }));
+
+  const handleAddSkill = () => {
     const s = skillInput.trim();
-    if (s && !skills.includes(s)) setSkills((prev) => [...prev, s]);
+    if (s && !(form.skills || []).includes(s)) updateField("skills", [...(form.skills || []), s]);
     setSkillInput("");
   };
-
   const handleSkillKey = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addSkill(); }
+    if (e.key === "Enter" || e.key === ",") { e.preventDefault(); handleAddSkill(); }
   };
 
-  const addPortfolioItem = () => {
-    setPortfolio((prev) => [...prev, { id: Date.now(), image: "", title: "", url: "" }]);
+  const handleProfileImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploadingImg(true);
+    try {
+      const storage = getStorage();
+      const r = storageRef(storage, `profiles/${user.uid}/avatar`);
+      await uploadBytes(r, file);
+      const url = await getDownloadURL(r);
+      updateField("image", url);
+    } catch { setError("Failed to upload image."); } finally { setUploadingImg(false); }
   };
 
-  const updatePortfolioItem = (id: number, key: keyof PortfolioItem, value: string) => {
-    setPortfolio((prev) => prev.map((p) => p.id === id ? { ...p, [key]: value } : p));
+  const handlePortfolioImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length || !user) return;
+    setUploadingPortfolio(true);
+    try {
+      const storage = getStorage();
+      const results = await Promise.all(files.map(async (file, i) => {
+        const r = storageRef(storage, `profiles/${user.uid}/portfolio/${Date.now()}-${i}`);
+        await uploadBytes(r, file);
+        const url = await getDownloadURL(r);
+        return { id: `${Date.now()}-${i}`, title: file.name.replace(/\.[^/.]+$/, ""), image: url } as PortfolioItem;
+      }));
+      updateField("portfolio", [...(form.portfolio || []), ...results]);
+    } catch { setError("Failed to upload portfolio images."); } finally { setUploadingPortfolio(false); }
   };
 
-  const handleIdFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVerificationImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setVerIdFile(file);
-    setUploading(true);
-    try {
-      const base64 = await fileToBase64(file);
-      setVerIdPreview(base64);
-    } catch {
-      alert("Failed to load verification image. Please try a different file.");
-    } finally {
-      setUploading(false);
-    }
+    setVerificationImage(file);
+    setVerificationPreview(URL.createObjectURL(file));
   };
 
   const handleSubmitVerification = async () => {
-    if (!user || !verStudentId.trim()) {
-      alert("Please enter your student ID number.");
+    if (!user) return;
+    setVerificationError("");
+    setVerificationSuccess("");
+    if (!verificationIdNumber.trim()) {
+      setVerificationError("Please enter your student matric number.");
       return;
     }
-    setVerSubmitting(true);
+    if (!verificationImage) {
+      setVerificationError("Please upload your student ID image.");
+      return;
+    }
+
+    setVerificationLoading(true);
     try {
-      let idImageUrl = "";
-      if (verIdFile) {
-        idImageUrl = await fileToBase64(verIdFile);
-      }
+      const idImageUrl = await uploadVerificationId(user.uid, verificationImage);
       await submitVerificationRequest({
         uid: user.uid,
         name: form.name || user.displayName || "",
-        email: user.email || "",
-        major: form.major,
-        year: form.year,
-        university: form.university,
-        studentId: verStudentId,
+        email: form.email || user.email || "",
+        major: form.major || "",
+        year: form.year || "",
+        university: form.university || "",
+        studentId: verificationIdNumber.trim(),
         idImage: idImageUrl,
       });
-      setVerSubmitted(true);
-      setVerStatus("Pending");
-    } catch {
-      alert("Verification submission failed. Please try again.");
+      setVerificationSuccess("Verification request submitted. Admin will review your ID soon.");
+      setVerificationImage(null);
+      setVerificationPreview("");
+      setVerificationIdNumber("");
+    } catch (err: any) {
+      setVerificationError(err.message || "Failed to submit verification request.");
     } finally {
-      setVerSubmitting(false);
+      setVerificationLoading(false);
     }
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-    setUploading(true);
-    try {
-      const base64 = await fileToBase64(file);
-      setForm((f) => ({ ...f, image: base64 }));
-    } catch {
-      alert("Failed to load profile photo. Please try a different image.");
-    } finally {
-      setUploading(false);
-    }
+  const updateExperience = (idx: number, key: keyof ExperienceItem, val: string) => {
+    const updated = [...(form.experience || [])];
+    updated[idx] = { ...updated[idx], [key]: val };
+    updateField("experience", updated);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    setSaving(true);
+    setSaving(true); setError("");
     try {
-      const data: Omit<StudentProfile, 'id' | 'uid'> = {
-        ...form,
-        skills,
-        portfolio,
-        email: user.email || "",
-        experience: [],
-        education: { degree: "", university: form.university, period: "", gpa: "" },
-        reviews: [],
-        rating: 0,
-        completedGigs: 0,
-        verificationStatus: "Pending",
-        role: "Student",
-        joinDate: new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }),
-        gigs: 0,
+      const payload: Omit<StudentProfile, "id" | "uid"> = {
+        name: form.name || "", major: form.major || "", year: form.year || "",
+        university: form.university || "", bio: form.bio || "",
+        email: form.email || user.email || "", phone: form.phone || "",
+        location: form.location || "", hourlyRate: form.hourlyRate || "",
+        skills: form.skills || [], portfolio: (form.portfolio || []) as StudentProfile["portfolio"],
+        experience: form.experience || [], education: form.education || { degree: "", university: "", period: "", gpa: "" },
+        image: form.image || "", rating: (form as StudentProfile).rating || 0,
+        completedGigs: (form as StudentProfile).completedGigs || 0,
+        reviews: (form as StudentProfile).reviews || [],
+        verificationStatus: (form as StudentProfile).verificationStatus || "Pending",
+        joinDate: (form as StudentProfile).joinDate || new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+        gigs: (form as StudentProfile).gigs || 0,
+        role: (form as StudentProfile).role || "student",
+        whatsappEnabled: form.whatsappEnabled || false, whatsappNumber: form.whatsappNumber || "",
       };
-      if (profileId) {
-        await updateStudentProfile(profileId, { ...data, uid: user.uid });
-      } else {
-        const newId = await createStudentProfile(user.uid, data);
-        setProfileId(newId);
-      }
+      if (existingId) await updateStudentProfile(existingId, payload);
+      else { const newId = await createStudentProfile(user.uid, payload); setExistingId(newId); }
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch {
-      alert("Save failed. Check your Firestore rules allow writes for authenticated users.");
-    } finally {
-      setSaving(false);
-    }
+    } catch (err: any) { setError(err.message || "Failed to save."); } finally { setSaving(false); }
   };
 
-  if (authLoading || loading) {
+  if (!user) {
     return (
-      <div className="min-h-screen bg-[#EFF8FF] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[#38B6FF] animate-spin" />
+      <div className="min-h-screen page-bg" style={{ fontFamily: "'Nunito', sans-serif" }}>
+        <Navbar />
+        <div className="flex items-center justify-center h-80">
+          <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-md p-10 text-center border border-white/60 dark:border-slate-700/40">
+            <p className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>You need to be signed in to edit your profile.</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#EFF8FF]" style={{ fontFamily: "'Nunito', sans-serif" }}>
+    <div className="min-h-screen page-bg" style={{ fontFamily: "'Nunito', sans-serif" }}>
       <Navbar />
 
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#38B6FF] via-[#60c8ff] to-[#a8e0ff] relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.25)_0%,_transparent_60%)]" />
-        <div className="relative max-w-2xl mx-auto px-6 py-10">
+      <div className="bg-gradient-to-br from-[#38B6FF] via-[#2fa8f0] to-[#1a6fcc] relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.2)_0%,_transparent_60%)]" />
+        <div className="relative max-w-4xl mx-auto px-6 py-12">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
+              <Palette className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-white text-3xl" style={{ fontWeight: 900 }}>Edit Profile</h1>
+            <h1 className="text-white text-4xl" style={{ fontWeight: 900 }}>My Profile</h1>
           </div>
-          <p className="text-white/80 text-sm" style={{ fontWeight: 500 }}>
-            Build your public student profile and attract clients
-          </p>
+          <p className="text-white/80" style={{ fontWeight: 500 }}>Build your campus profile and attract clients</p>
         </div>
         <div className="absolute bottom-0 left-0 right-0">
           <svg viewBox="0 0 1440 40" fill="none" className="w-full">
-            <path d="M0 40L1440 40L1440 20C1200 40 960 0 720 15C480 30 240 5 0 20L0 40Z" fill="#EFF8FF" />
+            <path d="M0 40L1440 40L1440 20C1200 40 960 0 720 15C480 30 240 5 0 20L0 40Z" className="fill-[#dbeafe] dark:fill-[#0d1321]" />
           </svg>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-6 py-8">
-        <form onSubmit={handleSave} className="space-y-6">
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        {loadingProfile ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center space-y-3">
+              <Loader2 className="w-10 h-10 text-[#38B6FF] animate-spin mx-auto" />
+              <p className="text-slate-500 dark:text-slate-400" style={{ fontWeight: 500 }}>Loading your profile…</p>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSave} className="space-y-5">
+            {saved && (
+              <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/30 rounded-2xl px-5 py-4">
+                <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                <p style={{ fontWeight: 600 }}>Profile saved successfully!</p>
+              </div>
+            )}
+            {error && (
+              <div className="flex items-center gap-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800/30 rounded-2xl px-5 py-4">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <p style={{ fontWeight: 600 }}>{error}</p>
+              </div>
+            )}
 
-          {/* Profile Photo */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm">
-            <h2 className="text-[#1A1D20] mb-4" style={{ fontWeight: 800 }}>Profile Photo</h2>
-            <div className="flex items-center gap-5">
-              <div className="relative">
-                {form.image ? (
-                  <img src={form.image} alt="Profile" className="w-20 h-20 rounded-2xl object-cover ring-4 ring-[#EFF8FF]" />
-                ) : (
-                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#38B6FF] to-[#1a9fe8] flex items-center justify-center text-white text-2xl" style={{ fontWeight: 800 }}>
-                    {form.name ? form.name[0].toUpperCase() : "?"}
+            {/* Profile photo */}
+            <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-7">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#38B6FF] to-[#1a9fe8] flex items-center justify-center shadow-md shadow-[#38B6FF]/25">
+                  <Camera className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Profile Photo</h2>
+              </div>
+              <div className="flex items-center gap-5">
+                <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-blue-50 dark:bg-slate-700/50 flex-shrink-0">
+                  {form.image ? (
+                    <ImageWithFallback src={form.image} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Camera className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+                    </div>
+                  )}
+                  {uploadingImg && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 text-white animate-spin" />
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <button type="button" onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-2 bg-blue-50 dark:bg-slate-700/50 border border-blue-100/60 dark:border-slate-600/50 text-[#38B6FF] px-5 py-2.5 rounded-xl hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
+                    style={{ fontWeight: 600 }}>
+                    <Upload className="w-4 h-4" />
+                    {form.image ? "Change Photo" : "Upload Photo"}
+                  </button>
+                  <p className="text-slate-400 dark:text-slate-500 text-xs" style={{ fontWeight: 500 }}>JPG, PNG, GIF · Max 5MB</p>
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleProfileImage} />
+                </div>
+              </div>
+            </div>
+
+            {/* Basic Info */}
+            <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-7">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center shadow-md shadow-violet-400/25">
+                  <GraduationCap className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Basic Information</h2>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Field label="FULL NAME" required>
+                  <input value={form.name || ""} onChange={(e) => updateField("name", e.target.value)} required placeholder="Your full name" className="input-style" />
+                </Field>
+                <Field label="EMAIL" required>
+                  <input value={form.email || ""} onChange={(e) => updateField("email", e.target.value)} required type="email" placeholder="your@email.com" className="input-style" />
+                </Field>
+                <Field label="MAJOR / FIELD">
+                  <input value={form.major || ""} onChange={(e) => updateField("major", e.target.value)} placeholder="e.g. Computer Science" className="input-style" />
+                </Field>
+                <Field label="YEAR">
+                  <div className="relative">
+                    <select value={form.year || ""} onChange={(e) => updateField("year", e.target.value)} className="input-style appearance-none">
+                      <option value="">Select year…</option>
+                      {["100L", "200L", "300L", "400L", "500L", "MSc", "PhD"].map((y) => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                   </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  className="absolute -bottom-2 -right-2 w-8 h-8 rounded-xl bg-[#FFC107] flex items-center justify-center shadow-md hover:bg-[#FFD000] transition-colors"
-                >
-                  <Camera className="w-4 h-4 text-[#1A1D20]" />
-                </button>
-              </div>
-              <div>
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  disabled={uploading}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-[#EFF8FF] rounded-xl text-[#38B6FF] text-sm hover:bg-[#daeeff] transition-colors disabled:opacity-60"
-                  style={{ fontWeight: 700 }}
-                >
-                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                  {uploading ? "Uploading…" : "Upload Photo"}
-                </button>
-                <p className="text-[#6b7a8d] text-xs mt-1.5" style={{ fontWeight: 500 }}>
-                  Or paste a photo URL below
-                </p>
-                <input
-                  type="url"
-                  placeholder="https://..."
-                  value={form.image}
-                  onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))}
-                  className="mt-1.5 w-full bg-[#EFF8FF] rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d]"
-                  style={{ fontWeight: 500 }}
-                />
+                </Field>
+                <Field label="UNIVERSITY">
+                  <input value={form.university || ""} onChange={(e) => updateField("university", e.target.value)} placeholder="e.g. University of Lagos" className="input-style" />
+                </Field>
+                <Field label="LOCATION">
+                  <input value={form.location || ""} onChange={(e) => updateField("location", e.target.value)} placeholder="e.g. Lagos, Nigeria" className="input-style" />
+                </Field>
+                <Field label="PHONE">
+                  <input value={form.phone || ""} onChange={(e) => updateField("phone", e.target.value)} type="tel" placeholder="+234 800 000 0000" className="input-style" />
+                </Field>
+                <Field label="HOURLY RATE">
+                  <input value={form.hourlyRate || ""} onChange={(e) => updateField("hourlyRate", e.target.value)} placeholder="e.g. ₦5,000/hr or $20/hr" className="input-style" />
+                </Field>
+                <div className="sm:col-span-2">
+                  <Field label="BIO">
+                    <textarea rows={4} value={form.bio || ""} onChange={(e) => updateField("bio", e.target.value)}
+                      placeholder="Tell clients about yourself, your skills, and what makes you unique…"
+                      className="input-style resize-none" />
+                  </Field>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Basic Info */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm space-y-4">
-            <h2 className="text-[#1A1D20]" style={{ fontWeight: 800 }}>Basic Info</h2>
-
-            <Field label="Full Name" icon={<User className="w-4 h-4" />}>
-              <input type="text" placeholder="Your full name" required value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                className="input-style" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
-            </Field>
-
-            <Field label="Bio" icon={<Briefcase className="w-4 h-4" />}>
-              <textarea placeholder="Tell clients about yourself, your skills, and experience..." rows={3}
-                value={form.bio} onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))}
-                className="input-style resize-none" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
-            </Field>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Hourly Rate" icon={<DollarSign className="w-4 h-4" />}>
-                <input type="text" placeholder="e.g. $45/hr" value={form.hourlyRate}
-                  onChange={(e) => setForm((f) => ({ ...f, hourlyRate: e.target.value }))}
-                  className="input-style" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
-              </Field>
-              <Field label="Location" icon={<MapPin className="w-4 h-4" />}>
-                <input type="text" placeholder="City, State" value={form.location}
-                  onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-                  className="input-style" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
-              </Field>
+            {/* WhatsApp */}
+            <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-7">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#25D366] to-[#128C7E] flex items-center justify-center shadow-md">
+                    <Code2 className="w-5 h-5 text-white" />
+                  </div>
+                  <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>WhatsApp Contact</h2>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={form.whatsappEnabled || false}
+                    onChange={(e) => updateField("whatsappEnabled", e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 rounded-full peer-checked:bg-[#25D366] transition-all after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
+                </label>
+              </div>
+              {form.whatsappEnabled && (
+                <Field label="WHATSAPP NUMBER">
+                  <input value={form.whatsappNumber || ""} onChange={(e) => updateField("whatsappNumber", e.target.value)}
+                    type="tel" placeholder="+234 800 000 0000" className="input-style" />
+                </Field>
+              )}
             </div>
 
-            <Field label="Phone" icon={<Phone className="w-4 h-4" />}>
-              <input type="tel" placeholder="+1 (555) 000-0000" value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                className="input-style" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
-            </Field>
-          </div>
-
-          {/* Education */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm space-y-4">
-            <h2 className="text-[#1A1D20]" style={{ fontWeight: 800 }}>Education</h2>
-            <Field label="University / College" icon={<GraduationCap className="w-4 h-4" />}>
-              <input type="text" placeholder="e.g. State University" value={form.university}
-                onChange={(e) => setForm((f) => ({ ...f, university: e.target.value }))}
-                className="input-style" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
-            </Field>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Major / Course">
-                <input type="text" placeholder="e.g. Computer Science" value={form.major}
-                  onChange={(e) => setForm((f) => ({ ...f, major: e.target.value }))}
-                  className="input-style" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
-              </Field>
-              <Field label="Year">
-                <select value={form.year} onChange={(e) => setForm((f) => ({ ...f, year: e.target.value }))}
-                  className="input-style" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}>
-                  {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-                </select>
-              </Field>
-            </div>
-          </div>
-
-          {/* Skills */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm space-y-4">
-            <h2 className="text-[#1A1D20]" style={{ fontWeight: 800 }}>Skills</h2>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Add a skill (press Enter)"
-                value={skillInput}
-                onChange={(e) => setSkillInput(e.target.value)}
-                onKeyDown={handleSkillKey}
-                className="flex-1 bg-[#EFF8FF] rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d] text-sm"
-                style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}
-              />
-              <button type="button" onClick={addSkill}
-                className="px-4 py-3 bg-[#38B6FF] rounded-xl text-white hover:bg-[#1a9fe8] transition-colors">
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-            {/* Quick add from categories */}
-            <div className="flex flex-wrap gap-2">
-              {SKILL_CATEGORIES.map((s) => (
-                <button key={s} type="button"
-                  onClick={() => { if (!skills.includes(s)) setSkills((p) => [...p, s]); }}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition-all ${skills.includes(s) ? "bg-[#38B6FF] text-white border-[#38B6FF]" : "bg-white text-[#6b7a8d] border-[#EFF8FF] hover:border-[#38B6FF] hover:text-[#38B6FF]"}`}
-                  style={{ fontWeight: 600 }}>
-                  {s}
+            {/* Skills */}
+            <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-7">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FFC107] to-[#ff9f00] flex items-center justify-center shadow-md shadow-amber-300/25">
+                  <PenLine className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Skills & Expertise</h2>
+              </div>
+              <div className="flex gap-2 mb-3">
+                <input value={skillInput} onChange={(e) => setSkillInput(e.target.value)} onKeyDown={handleSkillKey}
+                  placeholder="Add a skill and press Enter"
+                  className="flex-1 bg-blue-50/80 dark:bg-slate-700/50 border border-blue-100/50 dark:border-slate-600/50 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#38B6FF]/25 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
+                <button type="button" onClick={handleAddSkill}
+                  className="px-5 py-3 bg-[#38B6FF] text-white rounded-xl hover:bg-[#1a9fe8] transition-colors">
+                  <Plus className="w-4 h-4" />
                 </button>
-              ))}
-            </div>
-            {skills.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {skills.map((s) => (
-                  <span key={s} className="flex items-center gap-1.5 bg-[#EFF8FF] text-[#38B6FF] text-sm px-3 py-1.5 rounded-full" style={{ fontWeight: 600 }}>
+              </div>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {(form.skills || []).map((s) => (
+                  <span key={s} className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/30 text-[#38B6FF] text-xs px-3 py-1.5 rounded-full" style={{ fontWeight: 600 }}>
                     {s}
-                    <button type="button" onClick={() => setSkills((prev) => prev.filter((x) => x !== s))}>
-                      <X className="w-3.5 h-3.5 hover:text-red-400 transition-colors" />
+                    <button type="button" onClick={() => updateField("skills", (form.skills || []).filter((x) => x !== s))}>
+                      <X className="w-3 h-3 hover:text-red-400 transition-colors" />
                     </button>
                   </span>
                 ))}
               </div>
-            )}
-          </div>
-
-          {/* Portfolio */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-[#1A1D20]" style={{ fontWeight: 800 }}>Portfolio</h2>
-              {portfolio.length < 6 && (
-                <button type="button" onClick={addPortfolioItem}
-                  className="flex items-center gap-1.5 text-sm text-[#38B6FF] hover:text-[#1a9fe8] transition-colors"
-                  style={{ fontWeight: 700 }}>
-                  <Plus className="w-4 h-4" /> Add Item
-                </button>
-              )}
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-2" style={{ fontWeight: 600 }}>SUGGESTIONS</p>
+              <div className="flex flex-wrap gap-2">
+                {SKILL_SUGGESTIONS.filter((s) => !(form.skills || []).includes(s)).slice(0, 10).map((s) => (
+                  <button key={s} type="button" onClick={() => updateField("skills", [...(form.skills || []), s])}
+                    className="text-xs bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 px-3 py-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-[#38B6FF] transition-colors"
+                    style={{ fontWeight: 600 }}>
+                    + {s}
+                  </button>
+                ))}
+              </div>
             </div>
-            {portfolio.length === 0 && (
-              <p className="text-[#6b7a8d] text-sm" style={{ fontWeight: 500 }}>
-                Add links to your work — designs, GitHub repos, Behance, Dribbble, etc.
-              </p>
-            )}
-            <div className="space-y-3">
-              {portfolio.map((item) => (
-                <div key={item.id} className="bg-[#EFF8FF] rounded-2xl p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-[#38B6FF]">
-                      <Link2 className="w-4 h-4" />
-                      <span className="text-sm" style={{ fontWeight: 700 }}>Portfolio Item</span>
-                    </div>
-                    <button type="button"
-                      onClick={() => setPortfolio((p) => p.filter((x) => x.id !== item.id))}
-                      className="text-[#6b7a8d] hover:text-red-400 transition-colors">
-                      <X className="w-4 h-4" />
-                    </button>
+
+            {/* Portfolio */}
+            <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-7">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center shadow-md shadow-pink-400/25">
+                    <Palette className="w-5 h-5 text-white" />
                   </div>
-                  <input type="text" placeholder="Title (e.g. Brand Identity Project)"
-                    value={item.title}
-                    onChange={(e) => updatePortfolioItem(item.id, "title", e.target.value)}
-                    className="w-full bg-white rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d]"
-                    style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
-                  <input type="url" placeholder="Link URL (https://...)"
-                    value={item.url || ""}
-                    onChange={(e) => updatePortfolioItem(item.id, "url", e.target.value)}
-                    className="w-full bg-white rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d]"
-                    style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
-                  <input type="url" placeholder="Image URL for preview (optional)"
-                    value={item.image || ""}
-                    onChange={(e) => updatePortfolioItem(item.id, "image", e.target.value)}
-                    className="w-full bg-white rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d]"
-                    style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
+                  <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Portfolio</h2>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* WhatsApp */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm space-y-4">
-            <h2 className="text-[#1A1D20]" style={{ fontWeight: 800 }}>Contact</h2>
-            <Field label="WhatsApp Number" icon={<Phone className="w-4 h-4" />}>
-              <input type="tel" placeholder="+1 234 567 8900" value={form.whatsappNumber}
-                onChange={(e) => setForm((f) => ({ ...f, whatsappNumber: e.target.value }))}
-                className="input-style" style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
-            </Field>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <div
-                onClick={() => setForm((f) => ({ ...f, whatsappEnabled: !f.whatsappEnabled }))}
-                className={`w-11 h-6 rounded-full transition-colors ${form.whatsappEnabled ? "bg-[#38B6FF]" : "bg-gray-200"} relative`}
-              >
-                <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${form.whatsappEnabled ? "translate-x-5" : "translate-x-0.5"}`} />
+                <button type="button" onClick={() => portfolioInputRef.current?.click()}
+                  className="flex items-center gap-2 bg-blue-50 dark:bg-slate-700/50 text-[#38B6FF] px-4 py-2.5 rounded-xl hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
+                  style={{ fontWeight: 600 }}>
+                  <Upload className="w-4 h-4" />
+                  {uploadingPortfolio ? "Uploading…" : "Upload Images"}
+                </button>
+                <input ref={portfolioInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePortfolioImages} />
               </div>
-              <span className="text-[#1A1D20] text-sm" style={{ fontWeight: 600 }}>Show WhatsApp button on my profile</span>
-            </label>
-          </div>
-
-          {/* Verification */}
-          {verStatus !== "Verified" && (
-            <div className="bg-white rounded-3xl p-6 shadow-sm space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#38B6FF] to-[#1a9fe8] flex items-center justify-center shadow-md shadow-[#38B6FF]/25 flex-shrink-0">
-                  <ShieldCheck className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-[#1A1D20]" style={{ fontWeight: 800 }}>Get Verified</h2>
-                  <p className="text-[#6b7a8d] text-xs" style={{ fontWeight: 500 }}>Upload your student ID to earn a Verified badge</p>
-                </div>
-              </div>
-
-              {verSubmitted ? (
-                <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4">
-                  <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                  <p className="text-emerald-700 text-sm" style={{ fontWeight: 600 }}>
-                    Submitted! The admin will review your ID and approve your account soon.
-                  </p>
+              {(form.portfolio || []).length === 0 ? (
+                <div className="border-2 border-dashed border-blue-100 dark:border-slate-600/50 rounded-2xl p-10 text-center">
+                  <Upload className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                  <p className="text-slate-500 dark:text-slate-400 text-sm" style={{ fontWeight: 500 }}>Upload your best work to attract clients</p>
                 </div>
               ) : (
-                <>
-                  <div>
-                    <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>
-                      STUDENT ID NUMBER
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. STU-2023-12345"
-                      value={verStudentId}
-                      onChange={(e) => setVerStudentId(e.target.value)}
-                      className="w-full bg-[#EFF8FF] rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#38B6FF]/30 text-[#1A1D20] placeholder:text-[#6b7a8d]"
-                      style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-[#6b7a8d] mb-1.5 block" style={{ fontWeight: 700 }}>
-                      UPLOAD STUDENT ID CARD
-                    </label>
-                    <input ref={idFileRef} type="file" accept="image/*" className="hidden" onChange={handleIdFileChange} />
-                    {verIdPreview ? (
-                      <div className="relative">
-                        <img src={verIdPreview} alt="ID Preview" className="w-full h-40 object-cover rounded-2xl" />
-                        <button
-                          type="button"
-                          onClick={() => { setVerIdFile(null); setVerIdPreview(""); }}
-                          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
-                        >
-                          <X className="w-3.5 h-3.5" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {(form.portfolio || []).map((item) => (
+                    <div key={item.id} className="relative group rounded-2xl overflow-hidden aspect-square">
+                      <ImageWithFallback src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button type="button" onClick={() => updateField("portfolio", (form.portfolio || []).filter((p) => p.id !== item.id))}
+                          className="w-9 h-9 rounded-full bg-red-500 flex items-center justify-center text-white hover:bg-red-600 transition-colors">
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => idFileRef.current?.click()}
-                        className="w-full h-28 border-2 border-dashed border-[#38B6FF]/30 rounded-2xl flex flex-col items-center justify-center gap-2 text-[#38B6FF] hover:bg-[#EFF8FF] transition-colors"
-                      >
-                        <Upload className="w-5 h-5" />
-                        <span className="text-sm" style={{ fontWeight: 600 }}>Click to upload your ID photo</span>
-                        <span className="text-xs text-[#6b7a8d]" style={{ fontWeight: 500 }}>JPG, PNG — front side of your student card</span>
-                      </button>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleSubmitVerification}
-                    disabled={verSubmitting || !verStudentId.trim()}
-                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#38B6FF] to-[#1a9fe8] text-white py-3.5 rounded-2xl shadow-md shadow-[#38B6FF]/25 hover:shadow-lg transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:scale-100 text-sm"
-                    style={{ fontWeight: 700 }}
-                  >
-                    {verSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting…</> : <><ShieldCheck className="w-4 h-4" /> Submit for Verification</>}
-                  </button>
-                </>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-          )}
 
-          {/* Save */}
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full bg-gradient-to-r from-[#38B6FF] to-[#1a9fe8] text-white py-4 rounded-2xl shadow-lg shadow-[#38B6FF]/30 hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2"
-            style={{ fontWeight: 700, fontSize: "1rem" }}
-          >
-            {saving ? (
-              <><Loader2 className="w-5 h-5 animate-spin" /> Saving…</>
-            ) : saved ? (
-              <><CheckCircle className="w-5 h-5" /> Profile Saved!</>
-            ) : (
-              <><Save className="w-5 h-5" /> Save Profile</>
-            )}
-          </button>
+            {/* Verification */}
+            <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-7">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#38B6FF] to-[#1a9fe8] flex items-center justify-center shadow-md shadow-[#38B6FF]/25">
+                    <Shield className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Student Verification</h2>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm" style={{ fontWeight: 500 }}>
+                      {form.verificationStatus === "Verified"
+                        ? "Your account is verified by admin."
+                        : form.verificationStatus === "Pending"
+                          ? "Verification is pending review."
+                          : form.verificationStatus === "Rejected"
+                            ? "Verification was rejected. Please re-submit your ID." : "Submit your student ID for verification."}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-          {saved && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4 flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
-              <p className="text-emerald-700 text-sm" style={{ fontWeight: 600 }}>
-                Profile saved! Clients can now find you in the Profiles section.
-              </p>
+              {form.verificationStatus !== "Verified" && (
+                <div className="space-y-4">
+                  {verificationError && (
+                    <div className="rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30 text-red-700 dark:text-red-300 px-4 py-3" style={{ fontWeight: 600 }}>
+                      {verificationError}
+                    </div>
+                  )}
+                  {verificationSuccess && (
+                    <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30 text-emerald-700 dark:text-emerald-300 px-4 py-3" style={{ fontWeight: 600 }}>
+                      {verificationSuccess}
+                    </div>
+                  )}
+
+                  <Field label="Student Matric Number" required>
+                    <input value={verificationIdNumber} onChange={(e) => setVerificationIdNumber(e.target.value)} required placeholder="e.g. STU-2024-1234" className="input-style" />
+                  </Field>
+                  <Field label="Upload Student ID Image" required>
+                    <div className="space-y-3">
+                      <button type="button" onClick={() => document.getElementById("verification-id-file")?.click()}
+                        className="flex items-center gap-2 bg-blue-50 dark:bg-slate-700/50 border border-blue-100/60 dark:border-slate-600/50 text-[#38B6FF] px-4 py-3 rounded-xl hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
+                        style={{ fontWeight: 600 }}>
+                        <Upload className="w-4 h-4" />
+                        {verificationImage ? "Change ID Image" : "Choose ID Image"}
+                      </button>
+                      <input id="verification-id-file" type="file" accept="image/*" className="hidden" onChange={handleVerificationImage} />
+                      {verificationPreview && (
+                        <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700/50">
+                          <img src={verificationPreview} alt="Verification preview" className="w-full h-40 object-cover" />
+                        </div>
+                      )}
+                    </div>
+                  </Field>
+
+                  <button type="button" onClick={handleSubmitVerification} disabled={verificationLoading}
+                    className="w-full flex items-center justify-center gap-2 bg-[#FFC107] text-slate-900 py-4 rounded-2xl shadow-sm hover:bg-[#FFD000] transition-all disabled:opacity-60" style={{ fontWeight: 700 }}>
+                    {verificationLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    {verificationLoading ? "Submitting…" : "Submit Verification"}
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-        </form>
+
+            {/* Experience */}
+            <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-7">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-md shadow-emerald-400/25">
+                    <Briefcase className="w-5 h-5 text-white" />
+                  </div>
+                  <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Experience</h2>
+                </div>
+                <button type="button"
+                  onClick={() => updateField("experience", [...(form.experience || []), { role: "", organization: "", period: "", description: "" }])}
+                  className="flex items-center gap-2 bg-blue-50 dark:bg-slate-700/50 text-[#38B6FF] px-4 py-2.5 rounded-xl hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
+                  style={{ fontWeight: 600 }}>
+                  <Plus className="w-4 h-4" /> Add
+                </button>
+              </div>
+              <div className="space-y-5">
+                {(form.experience || []).map((exp, idx) => (
+                  <div key={idx} className="bg-blue-50/80 dark:bg-slate-700/50 rounded-2xl p-5 space-y-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-slate-400 dark:text-slate-500" style={{ fontWeight: 700 }}>EXPERIENCE {idx + 1}</span>
+                      {(form.experience || []).length > 1 && (
+                        <button type="button" onClick={() => updateField("experience", (form.experience || []).filter((_, i) => i !== idx))}
+                          className="text-red-400 hover:text-red-600 transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <Field label="ROLE">
+                        <input value={exp.role} onChange={(e) => updateExperience(idx, "role", e.target.value)} placeholder="e.g. Graphic Designer" className="input-style" />
+                      </Field>
+                      <Field label="ORGANIZATION">
+                        <input value={exp.organization} onChange={(e) => updateExperience(idx, "organization", e.target.value)} placeholder="e.g. Freelance / Company" className="input-style" />
+                      </Field>
+                      <Field label="PERIOD">
+                        <input value={exp.period} onChange={(e) => updateExperience(idx, "period", e.target.value)} placeholder="e.g. Jan 2024 – Present" className="input-style" />
+                      </Field>
+                    </div>
+                    <Field label="DESCRIPTION">
+                      <textarea rows={2} value={exp.description} onChange={(e) => updateExperience(idx, "description", e.target.value)}
+                        placeholder="What did you achieve?" className="input-style resize-none" />
+                    </Field>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Education */}
+            <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-7">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FFC107] to-[#ff9f00] flex items-center justify-center shadow-md shadow-amber-300/25">
+                  <Award className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Education</h2>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Field label="DEGREE">
+                  <input value={form.education?.degree || ""} onChange={(e) => updateField("education", { ...form.education, degree: e.target.value })} placeholder="e.g. B.Sc. Computer Science" className="input-style" />
+                </Field>
+                <Field label="UNIVERSITY">
+                  <input value={form.education?.university || ""} onChange={(e) => updateField("education", { ...form.education, university: e.target.value })} placeholder="e.g. University of Lagos" className="input-style" />
+                </Field>
+                <Field label="PERIOD">
+                  <input value={form.education?.period || ""} onChange={(e) => updateField("education", { ...form.education, period: e.target.value })} placeholder="e.g. 2021 – 2025" className="input-style" />
+                </Field>
+                <Field label="GPA">
+                  <input value={form.education?.gpa || ""} onChange={(e) => updateField("education", { ...form.education, gpa: e.target.value })} placeholder="e.g. 4.5 / 5.0" className="input-style" />
+                </Field>
+              </div>
+            </div>
+
+            {/* Save */}
+            <button type="submit" disabled={saving}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#38B6FF] to-[#1a9fe8] text-white py-4 rounded-2xl shadow-lg shadow-[#38B6FF]/30 hover:shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:scale-100 text-base"
+              style={{ fontWeight: 700 }}>
+              {saving ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving…</> : <><Save className="w-5 h-5" /> Save Profile</>}
+            </button>
+            <div className="h-6" />
+          </form>
+        )}
       </div>
-
-      <style>{`
-        .input-style {
-          width: 100%;
-          background: #EFF8FF;
-          border-radius: 12px;
-          padding: 12px 16px;
-          outline: none;
-          color: #1A1D20;
-          font-size: 0.875rem;
-        }
-        .input-style:focus {
-          box-shadow: 0 0 0 2px rgba(56,182,255,0.3);
-        }
-        .input-style::placeholder { color: #6b7a8d; }
-      `}</style>
-    </div>
-  );
-}
-
-function Field({ label, icon, children }: { label: string; icon?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="flex items-center gap-1.5 text-xs text-[#6b7a8d] mb-1.5" style={{ fontWeight: 700 }}>
-        {icon && <span className="text-[#38B6FF]">{icon}</span>}
-        {label.toUpperCase()}
-      </label>
-      {children}
     </div>
   );
 }

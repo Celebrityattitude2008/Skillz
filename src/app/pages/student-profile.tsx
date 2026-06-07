@@ -29,12 +29,12 @@ export function StudentProfile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#EFF8FF]" style={{ fontFamily: "'Nunito', sans-serif" }}>
+      <div className="min-h-screen page-bg" style={{ fontFamily: "'Nunito', sans-serif" }}>
         <Navbar />
         <div className="flex items-center justify-center h-96">
           <div className="text-center space-y-3">
             <Loader2 className="w-10 h-10 text-[#38B6FF] animate-spin mx-auto" />
-            <p className="text-[#6b7a8d]" style={{ fontWeight: 500 }}>Loading profile…</p>
+            <p className="text-slate-500 dark:text-slate-400" style={{ fontWeight: 500 }}>Loading profile…</p>
           </div>
         </div>
       </div>
@@ -43,15 +43,15 @@ export function StudentProfile() {
 
   if (!student) {
     return (
-      <div className="min-h-screen bg-[#EFF8FF]" style={{ fontFamily: "'Nunito', sans-serif" }}>
+      <div className="min-h-screen page-bg" style={{ fontFamily: "'Nunito', sans-serif" }}>
         <Navbar />
         <div className="flex items-center justify-center h-96">
           <div className="text-center space-y-3">
-            <div className="w-16 h-16 rounded-2xl bg-[#EFF8FF] flex items-center justify-center mx-auto">
+            <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-slate-700/50 flex items-center justify-center mx-auto">
               <Briefcase className="w-8 h-8 text-[#38B6FF]" />
             </div>
-            <p className="text-[#1A1D20] text-lg" style={{ fontWeight: 800 }}>Profile not found</p>
-            <p className="text-[#6b7a8d] text-sm" style={{ fontWeight: 500 }}>This student profile doesn't exist yet.</p>
+            <p className="text-slate-900 dark:text-white text-lg" style={{ fontWeight: 800 }}>Profile not found</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm" style={{ fontWeight: 500 }}>This student profile doesn't exist yet.</p>
           </div>
         </div>
       </div>
@@ -59,22 +59,22 @@ export function StudentProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-[#EFF8FF]" style={{ fontFamily: "'Nunito', sans-serif" }}>
+    <div className="min-h-screen page-bg" style={{ fontFamily: "'Nunito', sans-serif" }}>
       <Navbar />
 
-      {/* Hero header */}
-      <div className="bg-gradient-to-br from-[#38B6FF] via-[#60c8ff] to-[#a8e0ff] relative overflow-hidden pt-12 pb-24">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.25)_0%,_transparent_60%)]" />
+      {/* Hero */}
+      <div className="bg-gradient-to-br from-[#38B6FF] via-[#2fa8f0] to-[#1a6fcc] relative overflow-hidden pt-12 pb-24">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.2)_0%,_transparent_60%)]" />
         <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
-            <path d="M0 80L1440 80L1440 40C1200 80 960 0 720 30C480 60 240 10 0 40L0 80Z" fill="#EFF8FF" />
+          <svg viewBox="0 0 1440 80" fill="none" className="w-full">
+            <path d="M0 80L1440 80L1440 40C1200 80 960 0 720 30C480 60 240 10 0 40L0 80Z" className="fill-[#dbeafe] dark:fill-[#0d1321]" />
           </svg>
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-6 -mt-20 relative">
         {/* Profile card */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-[#38B6FF]/12 p-7 mb-6">
+        <div className="bg-white dark:bg-slate-800/90 rounded-3xl shadow-xl shadow-blue-200/20 dark:shadow-slate-900/50 border border-white/60 dark:border-slate-700/40 p-7 mb-6">
           <div className="flex flex-col sm:flex-row gap-6 items-start">
             <div className="relative flex-shrink-0">
               <ImageWithFallback src={student.image} alt={student.name} className="w-28 h-28 rounded-2xl object-cover shadow-lg" />
@@ -88,39 +88,36 @@ export function StudentProfile() {
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
                 <div>
-                  <h1 className="text-2xl text-[#1A1D20]" style={{ fontWeight: 900 }}>{student.name}</h1>
-                  <p className="text-[#6b7a8d] text-sm" style={{ fontWeight: 500 }}>
+                  <h1 className="text-2xl text-slate-900 dark:text-white" style={{ fontWeight: 900 }}>{student.name}</h1>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm" style={{ fontWeight: 500 }}>
                     {student.major} · {student.year} · {student.university}
                   </p>
                 </div>
-                <span className="bg-[#FFC107] text-[#1A1D20] text-xs px-3 py-1.5 rounded-full flex items-center gap-1" style={{ fontWeight: 700 }}>
+                <span className="bg-[#FFC107] text-slate-900 text-xs px-3 py-1.5 rounded-full flex items-center gap-1" style={{ fontWeight: 700 }}>
                   <Star className="w-3.5 h-3.5 fill-current" /> {student.rating} · Top Rated
                 </span>
               </div>
-              <p className="text-[#6b7a8d] text-sm leading-relaxed mb-4" style={{ fontWeight: 500 }}>{student.bio}</p>
+              <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-4" style={{ fontWeight: 500 }}>{student.bio}</p>
               <div className="flex flex-wrap gap-1.5">
                 {student.skills.map((skill) => (
-                  <span key={skill} className="bg-[#EFF8FF] text-[#38B6FF] text-xs px-3 py-1.5 rounded-full" style={{ fontWeight: 600 }}>{skill}</span>
+                  <span key={skill} className="bg-blue-50 dark:bg-blue-900/30 text-[#38B6FF] text-xs px-3 py-1.5 rounded-full" style={{ fontWeight: 600 }}>{skill}</span>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="mt-5 pt-5 border-t border-[#EFF8FF] flex flex-wrap items-center gap-4">
-            <span className="flex items-center gap-1.5 text-sm text-[#6b7a8d]" style={{ fontWeight: 500 }}>
+          <div className="mt-5 pt-5 border-t border-blue-50 dark:border-slate-700/60 flex flex-wrap items-center gap-4">
+            <span className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400" style={{ fontWeight: 500 }}>
               <Mail className="w-4 h-4 text-[#38B6FF]" /> {student.email}
             </span>
-            <span className="flex items-center gap-1.5 text-sm text-[#6b7a8d]" style={{ fontWeight: 500 }}>
+            <span className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400" style={{ fontWeight: 500 }}>
               <MapPin className="w-4 h-4 text-[#38B6FF]" /> {student.location}
             </span>
             {student.whatsappEnabled && (
-              <a
-                href={`https://wa.me/${student.whatsappNumber.replace(/\D/g, "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-auto bg-[#25D366] text-white px-5 py-2.5 rounded-full flex items-center gap-2 hover:bg-[#20bd5a] transition-all hover:scale-105 active:scale-95 shadow-md shadow-[#25D366]/25"
-                style={{ fontWeight: 700 }}
-              >
+              <a href={`https://wa.me/${student.whatsappNumber.replace(/\D/g, "")}`}
+                target="_blank" rel="noopener noreferrer"
+                className="ml-auto bg-[#25D366] text-white px-5 py-2.5 rounded-full flex items-center gap-2 hover:bg-[#20bd5a] transition-all hover:scale-105 active:scale-95 shadow-md shadow-green-400/25"
+                style={{ fontWeight: 700 }}>
                 <MessageCircle className="w-4 h-4" />
                 WhatsApp
               </a>
@@ -129,28 +126,25 @@ export function StudentProfile() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Main column */}
+          {/* Main */}
           <div className="lg:col-span-2 space-y-5">
             {/* Tabs */}
-            <div className="bg-white rounded-2xl p-1.5 shadow-sm flex gap-1">
+            <div className="bg-white dark:bg-slate-800/80 rounded-2xl p-1.5 shadow-sm border border-white/60 dark:border-slate-700/40 flex gap-1">
               {(["portfolio", "experience", "reviews"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
+                <button key={tab} onClick={() => setActiveTab(tab)}
                   className={`flex-1 py-2.5 rounded-xl text-sm capitalize transition-all ${
                     activeTab === tab
                       ? "bg-[#38B6FF] text-white shadow-md shadow-[#38B6FF]/30"
-                      : "text-[#6b7a8d] hover:text-[#1A1D20]"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                   }`}
-                  style={{ fontWeight: 600 }}
-                >
+                  style={{ fontWeight: 600 }}>
                   {tab}
                 </button>
               ))}
             </div>
 
             {activeTab === "portfolio" && (
-              <div className="bg-[#111214] rounded-3xl p-6 shadow-xl">
+              <div className="bg-slate-900 dark:bg-slate-900 rounded-3xl p-6 shadow-xl border border-slate-800">
                 <h2 className="text-white mb-5" style={{ fontWeight: 800 }}>Visual Portfolio</h2>
                 {student.portfolio.length > 0 ? (
                   <Masonry columnsCount={2} columnsCountBreakPoints={{ 350: 1, 768: 2 }} gutter="0.75rem">
@@ -171,49 +165,49 @@ export function StudentProfile() {
 
             {activeTab === "experience" && (
               <div className="space-y-4">
-                <div className="bg-white rounded-3xl shadow-sm p-7">
+                <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-7">
                   <div className="flex items-center gap-3 mb-5">
                     <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#38B6FF] to-[#1a9fe8] flex items-center justify-center shadow-md shadow-[#38B6FF]/25">
                       <Briefcase className="w-5 h-5 text-white" />
                     </div>
-                    <h2 className="text-[#1A1D20]" style={{ fontWeight: 800 }}>Experience</h2>
+                    <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Experience</h2>
                   </div>
                   <div className="space-y-5">
                     {student.experience.map((exp, i) => (
                       <div key={i} className="border-l-4 border-[#38B6FF] pl-5 pb-5 last:pb-0">
-                        <h3 className="text-[#1A1D20]" style={{ fontWeight: 700 }}>{exp.role}</h3>
-                        <p className="text-[#6b7a8d] text-sm" style={{ fontWeight: 500 }}>{exp.organization} · {exp.period}</p>
-                        <p className="text-[#1A1D20] text-sm mt-2 leading-relaxed" style={{ fontWeight: 500 }}>{exp.description}</p>
+                        <h3 className="text-slate-900 dark:text-white" style={{ fontWeight: 700 }}>{exp.role}</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm" style={{ fontWeight: 500 }}>{exp.organization} · {exp.period}</p>
+                        <p className="text-slate-600 dark:text-slate-300 text-sm mt-2 leading-relaxed" style={{ fontWeight: 500 }}>{exp.description}</p>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="bg-white rounded-3xl shadow-sm p-7">
+                <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-7">
                   <div className="flex items-center gap-3 mb-5">
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FFC107] to-[#ff9f00] flex items-center justify-center shadow-md shadow-[#FFC107]/25">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FFC107] to-[#ff9f00] flex items-center justify-center shadow-md shadow-amber-300/25">
                       <Award className="w-5 h-5 text-white" />
                     </div>
-                    <h2 className="text-[#1A1D20]" style={{ fontWeight: 800 }}>Education</h2>
+                    <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Education</h2>
                   </div>
                   <div className="border-l-4 border-[#FFC107] pl-5">
-                    <h3 className="text-[#1A1D20]" style={{ fontWeight: 700 }}>{student.education.degree}</h3>
-                    <p className="text-[#6b7a8d] text-sm" style={{ fontWeight: 500 }}>{student.education.university} · {student.education.period}</p>
-                    <p className="text-sm text-[#1A1D20] mt-1" style={{ fontWeight: 600 }}>GPA: {student.education.gpa}</p>
+                    <h3 className="text-slate-900 dark:text-white" style={{ fontWeight: 700 }}>{student.education.degree}</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm" style={{ fontWeight: 500 }}>{student.education.university} · {student.education.period}</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 mt-1" style={{ fontWeight: 600 }}>GPA: {student.education.gpa}</p>
                   </div>
                 </div>
               </div>
             )}
 
             {activeTab === "reviews" && (
-              <div className="bg-white rounded-3xl shadow-sm p-7 space-y-4">
-                <h2 className="text-[#1A1D20]" style={{ fontWeight: 800 }}>Client Reviews</h2>
+              <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-7 space-y-4">
+                <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Client Reviews</h2>
                 {student.reviews.length > 0 ? student.reviews.map((review) => (
-                  <div key={review.id} className="bg-[#EFF8FF] rounded-2xl p-5">
+                  <div key={review.id} className="bg-blue-50/80 dark:bg-slate-700/50 rounded-2xl p-5 border border-blue-100/30 dark:border-slate-600/30">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <p className="text-[#1A1D20]" style={{ fontWeight: 700 }}>{review.author}</p>
-                        <p className="text-[#6b7a8d] text-xs" style={{ fontWeight: 500 }}>{review.role}</p>
+                        <p className="text-slate-900 dark:text-white" style={{ fontWeight: 700 }}>{review.author}</p>
+                        <p className="text-slate-400 dark:text-slate-500 text-xs" style={{ fontWeight: 500 }}>{review.role}</p>
                       </div>
                       <div className="flex gap-0.5">
                         {[...Array(review.rating)].map((_, i) => (
@@ -221,11 +215,11 @@ export function StudentProfile() {
                         ))}
                       </div>
                     </div>
-                    <p className="text-[#1A1D20] text-sm italic leading-relaxed" style={{ fontWeight: 500 }}>"{review.comment}"</p>
-                    <p className="text-[#6b7a8d] text-xs mt-2" style={{ fontWeight: 500 }}>{review.date}</p>
+                    <p className="text-slate-600 dark:text-slate-300 text-sm italic leading-relaxed" style={{ fontWeight: 500 }}>"{review.comment}"</p>
+                    <p className="text-slate-400 dark:text-slate-500 text-xs mt-2" style={{ fontWeight: 500 }}>{review.date}</p>
                   </div>
                 )) : (
-                  <p className="text-[#6b7a8d] text-sm text-center py-8" style={{ fontWeight: 500 }}>No reviews yet.</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm text-center py-8" style={{ fontWeight: 500 }}>No reviews yet.</p>
                 )}
               </div>
             )}
@@ -233,7 +227,7 @@ export function StudentProfile() {
 
           {/* Sidebar */}
           <div className="space-y-5">
-            <div className="bg-gradient-to-br from-[#38B6FF] to-[#1a9fe8] rounded-3xl p-6 text-white shadow-xl shadow-[#38B6FF]/25 relative overflow-hidden">
+            <div className="bg-gradient-to-br from-[#38B6FF] to-[#1a6fcc] rounded-3xl p-6 text-white shadow-xl shadow-blue-400/20 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/10 -translate-y-1/2 translate-x-1/2" />
               <h3 className="mb-5" style={{ fontWeight: 800 }}>Profile Stats</h3>
               <div className="space-y-4">
@@ -250,40 +244,37 @@ export function StudentProfile() {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm p-6">
-              <h3 className="text-[#1A1D20] mb-4" style={{ fontWeight: 800 }}>Get in Touch</h3>
+            <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-sm border border-white/60 dark:border-slate-700/40 p-6">
+              <h3 className="text-slate-900 dark:text-white mb-4" style={{ fontWeight: 800 }}>Get in Touch</h3>
               <div className="space-y-3 mb-5">
                 {[
                   { icon: <Mail className="w-4 h-4" />, text: student.email },
                   { icon: <Phone className="w-4 h-4" />, text: student.phone },
                   { icon: <MapPin className="w-4 h-4" />, text: student.location },
                 ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-2.5 text-sm text-[#6b7a8d]" style={{ fontWeight: 500 }}>
+                  <div key={i} className="flex items-center gap-2.5 text-sm text-slate-500 dark:text-slate-400" style={{ fontWeight: 500 }}>
                     <span className="text-[#38B6FF]">{item.icon}</span>
                     {item.text}
                   </div>
                 ))}
               </div>
               {student.whatsappEnabled && (
-                <a
-                  href={`https://wa.me/${student.whatsappNumber.replace(/\D/g, "")}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full bg-[#25D366] text-white py-3 rounded-2xl hover:bg-[#20bd5a] transition-all shadow-md shadow-[#25D366]/25 hover:scale-[1.02] active:scale-[0.98]"
-                  style={{ fontWeight: 700 }}
-                >
+                <a href={`https://wa.me/${student.whatsappNumber.replace(/\D/g, "")}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full bg-[#25D366] text-white py-3 rounded-2xl hover:bg-[#20bd5a] transition-all shadow-md shadow-green-400/20 hover:scale-[1.02] active:scale-[0.98]"
+                  style={{ fontWeight: 700 }}>
                   <MessageCircle className="w-5 h-5" />
                   Message on WhatsApp
                 </a>
               )}
             </div>
 
-            <div className="bg-[#FFC107] rounded-3xl p-6 shadow-lg shadow-[#FFC107]/25">
-              <p className="text-[#1A1D20] mb-1" style={{ fontWeight: 800 }}>Ready to collaborate?</p>
+            <div className="bg-[#FFC107] rounded-3xl p-6 shadow-lg shadow-amber-300/25">
+              <p className="text-slate-900 mb-1" style={{ fontWeight: 800 }}>Ready to collaborate?</p>
               {student.hourlyRate && (
-                <p className="text-[#1A1D20]/70 text-sm mb-4" style={{ fontWeight: 500 }}>Starting at {student.hourlyRate}</p>
+                <p className="text-slate-700 text-sm mb-4" style={{ fontWeight: 500 }}>Starting at {student.hourlyRate}</p>
               )}
-              <button className="w-full bg-[#1A1D20] text-white py-3 rounded-2xl hover:bg-[#2d3339] transition-colors" style={{ fontWeight: 700 }}>
+              <button className="w-full bg-slate-900 text-white py-3 rounded-2xl hover:bg-slate-800 transition-colors" style={{ fontWeight: 700 }}>
                 Book {student.name.split(" ")[0]}
               </button>
             </div>
