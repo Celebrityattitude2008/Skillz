@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Crown, X, BarChart2, Calendar, TrendingUp, Star, Zap, CheckCircle } from "lucide-react";
+import { Crown, X, BarChart2, Calendar, TrendingUp, Star, CheckCircle } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
+import { getStudentByUid } from "../../lib/firestore";
 
 const PRO_BENEFITS = [
   { Icon: Crown, label: "Gold Pro Badge", desc: "Stand out with a verified Pro crown on every listing", color: "text-[#FFC107]" },
@@ -19,13 +20,26 @@ export function ProUpgradeModal() {
   useEffect(() => {
     if (!user) return;
     const shown = sessionStorage.getItem(SESSION_KEY);
-    if (!shown) {
-      const timer = setTimeout(() => {
-        setShow(true);
-        sessionStorage.setItem(SESSION_KEY, "1");
-      }, 3500);
-      return () => clearTimeout(timer);
-    }
+    if (shown) return;
+
+    let timer: ReturnType<typeof setTimeout>;
+
+    getStudentByUid(user.uid)
+      .then((student) => {
+        if (student?.isPro) return;
+        timer = setTimeout(() => {
+          setShow(true);
+          sessionStorage.setItem(SESSION_KEY, "1");
+        }, 3500);
+      })
+      .catch(() => {
+        timer = setTimeout(() => {
+          setShow(true);
+          sessionStorage.setItem(SESSION_KEY, "1");
+        }, 3500);
+      });
+
+    return () => clearTimeout(timer);
   }, [user]);
 
   if (!show) return null;
@@ -80,7 +94,7 @@ export function ProUpgradeModal() {
           </div>
 
           <a
-            href="mailto:skillz@zohomail.com?subject=Pro%20Upgrade%20Request&body=Hi%20Skillz%20team%2C%20I%27d%20like%20to%20upgrade%20to%20Pro.%20My%20account%20email%20is%3A%20[your%20email]"
+            href={`mailto:skillz@zohomail.com?subject=Pro%20Upgrade%20Request&body=Hi%20Skillz%20team%2C%20I%27d%20like%20to%20upgrade%20to%20Pro.%20My%20account%20email%20is%3A%20${encodeURIComponent(user?.email ?? '')}`}
             className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-[#FFC107] to-[#ff9f00] text-slate-900 py-3.5 rounded-2xl shadow-lg shadow-amber-300/30 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all mb-2"
             style={{ fontWeight: 800, fontSize: "15px" }}
             onClick={() => setShow(false)}

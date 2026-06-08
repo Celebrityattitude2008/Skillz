@@ -2,14 +2,14 @@ import { Navbar } from "../components/navbar";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import {
   Users, CheckCircle, XCircle, Clock, Shield, Star, Trash2, AlertTriangle,
-  Search, Loader2, RefreshCw, Database, Lock,
+  Search, Loader2, RefreshCw, Database, Lock, Crown,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import {
   getUsers, updateUser, getPendingVerifications, deleteVerification,
   getFlaggedContent, deleteFlaggedItem, getStudents, setSpotlightStudent,
-  approveVerification, getGigs, deleteGig,
+  approveVerification, getGigs, deleteGig, toggleStudentPro,
   type AdminUser, type PendingVerification, type FlaggedItem, type StudentProfile,
 } from "../../lib/firestore";
 import { useAuth } from "../../lib/auth-context";
@@ -35,7 +35,7 @@ export function AdminPanel() {
   const { user, loading: authLoading } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
 
-  const [selectedTab, setSelectedTab] = useState<"users" | "verification" | "spotlight" | "moderation">("users");
+  const [selectedTab, setSelectedTab] = useState<"users" | "verification" | "spotlight" | "moderation" | "pro">("users");
   const [searchQuery, setSearchQuery] = useState("");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [verifications, setVerifications] = useState<PendingVerification[]>([]);
@@ -87,6 +87,11 @@ export function AdminPanel() {
     await setSpotlightStudent(selectedStudent);
     setSpotlightSaved(true);
     setTimeout(() => setSpotlightSaved(false), 3000);
+  };
+
+  const handleTogglePro = async (studentId: string, currentIsPro: boolean) => {
+    await toggleStudentPro(studentId, !currentIsPro);
+    setStudents((prev) => prev.map((s) => s.id === studentId ? { ...s, isPro: !currentIsPro } : s));
   };
 
   const handleCleanSeedGigs = async () => {
@@ -145,6 +150,7 @@ export function AdminPanel() {
   const tabs = [
     { key: "users", label: "Users", Icon: Users, count: users.length },
     { key: "verification", label: "Verify", Icon: Shield, count: verifications.length },
+    { key: "pro", label: "Pro", Icon: Crown, count: students.filter((s) => s.isPro).length },
     { key: "spotlight", label: "Spotlight", Icon: Star, count: 0 },
     { key: "moderation", label: "Reports", Icon: AlertTriangle, count: flagged.length },
   ] as const;
@@ -319,6 +325,76 @@ export function AdminPanel() {
                         className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-200 dark:hover:bg-red-900/40 transition-colors text-sm"
                         style={{ fontWeight: 700 }}>
                         <XCircle className="w-4 h-4" /> Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Pro Students Tab */}
+        {selectedTab === "pro" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>Pro Student Management</h2>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5" style={{ fontWeight: 500 }}>
+                  Grant or revoke Pro status. Pro students get a gold badge, are boosted in search, and unlock analytics + booking.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 bg-[#FFC107]/10 text-[#FFC107] px-3 py-2 rounded-xl border border-[#FFC107]/20 flex-shrink-0">
+                <Crown className="w-4 h-4 fill-[#FFC107]" />
+                <span className="text-sm" style={{ fontWeight: 700 }}>{students.filter((s) => s.isPro).length} Pro</span>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 text-[#38B6FF] animate-spin" /></div>
+            ) : students.length === 0 ? (
+              <div className="bg-white dark:bg-slate-800/80 rounded-3xl p-12 text-center border border-white/60 dark:border-slate-700/40">
+                <p className="text-slate-500 dark:text-slate-400" style={{ fontWeight: 500 }}>No student profiles found</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {students.map((s) => (
+                  <div key={s.id} className={`bg-white dark:bg-slate-800/80 rounded-2xl p-4 shadow-sm border transition-all ${s.isPro ? "border-[#FFC107]/30 dark:border-[#FFC107]/20 bg-amber-50/30 dark:bg-amber-900/10" : "border-white/60 dark:border-slate-700/40"}`}>
+                    <div className="flex items-center gap-4">
+                      <ImageWithFallback src={s.image} alt={s.name} className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-slate-900 dark:text-white text-sm truncate" style={{ fontWeight: 700 }}>{s.name}</p>
+                          {s.isPro && (
+                            <span className="flex items-center gap-1 bg-[#FFC107] text-slate-900 text-[10px] px-2 py-0.5 rounded-full flex-shrink-0" style={{ fontWeight: 800 }}>
+                              <Crown className="w-2.5 h-2.5 fill-slate-900" /> Pro
+                            </span>
+                          )}
+                          {s.verificationStatus === "Verified" && (
+                            <span className="flex items-center gap-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] px-2 py-0.5 rounded-full flex-shrink-0" style={{ fontWeight: 700 }}>
+                              <CheckCircle className="w-2.5 h-2.5" /> Verified
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-slate-500 dark:text-slate-400 text-xs truncate" style={{ fontWeight: 500 }}>
+                          {s.major} · {s.university}
+                        </p>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          <span className="text-slate-400 dark:text-slate-500 text-xs" style={{ fontWeight: 500 }}>
+                            ★ {s.rating > 0 ? s.rating.toFixed(1) : "—"} · {s.completedGigs || 0} gigs
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleTogglePro(s.id!, !!s.isPro)}
+                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs transition-all flex-shrink-0 ${
+                          s.isPro
+                            ? "bg-[#FFC107] text-slate-900 hover:bg-[#ffb300] shadow-md shadow-amber-300/30"
+                            : "bg-slate-100 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 hover:bg-[#FFC107]/20 hover:text-[#FFC107] border border-slate-200 dark:border-slate-600/50"
+                        }`}
+                        style={{ fontWeight: 700 }}>
+                        <Crown className={`w-3.5 h-3.5 ${s.isPro ? "fill-slate-900" : ""}`} />
+                        {s.isPro ? "Revoke Pro" : "Grant Pro"}
                       </button>
                     </div>
                   </div>

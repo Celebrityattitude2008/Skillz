@@ -182,37 +182,58 @@ export function DashboardPage() {
               </div>
               <div>
                 <h2 className="text-slate-900 dark:text-white text-sm" style={{ fontWeight: 800 }}>Profile Analytics</h2>
-                <p className="text-slate-400 dark:text-slate-500 text-xs" style={{ fontWeight: 500 }}>How people are finding you</p>
+                <p className="text-slate-400 dark:text-slate-500 text-xs" style={{ fontWeight: 500 }}>
+                  {student.isPro ? "How people are finding you" : "Pro feature — upgrade to unlock"}
+                </p>
               </div>
             </div>
-            {!student.isPro && (
-              <a href="mailto:skillz@zohomail.com?subject=Pro%20Upgrade%20Request"
-                className="flex items-center gap-1 bg-[#FFC107]/10 text-[#FFC107] text-xs px-3 py-1.5 rounded-full hover:bg-[#FFC107]/20 transition-colors"
-                style={{ fontWeight: 700 }}>
-                <Crown className="w-3 h-3 fill-[#FFC107]" /> Upgrade to Pro
-              </a>
+            {student.isPro && (
+              <span className="flex items-center gap-1 bg-[#FFC107]/10 text-[#FFC107] text-xs px-2.5 py-1 rounded-full" style={{ fontWeight: 700 }}>
+                <Crown className="w-3 h-3 fill-[#FFC107]" /> Pro
+              </span>
             )}
           </div>
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { Icon: Eye, value: student.profileViews ?? 0, label: "Profile Views", color: "text-[#38B6FF]", bg: "bg-blue-50 dark:bg-blue-900/20" },
-              { Icon: MessageCircle, value: student.whatsappClicks ?? 0, label: "WhatsApp Clicks", color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
-              {
-                Icon: TrendingUp,
-                value: applications.length > 0 ? `${Math.round((accepted.length / applications.length) * 100)}%` : "—",
-                label: "Success Rate",
-                color: "text-violet-500",
-                bg: "bg-violet-50 dark:bg-violet-900/20",
-              },
-            ].map((s) => (
-              <div key={s.label} className={`${s.bg} rounded-2xl p-4 text-center`}>
-                <div className={`w-8 h-8 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center mx-auto mb-2 shadow-sm`}>
-                  <s.Icon className={`w-4 h-4 ${s.color}`} />
+
+          <div className="relative">
+            <div className={`grid grid-cols-3 gap-4 ${!student.isPro ? "blur-sm pointer-events-none select-none" : ""}`}>
+              {[
+                { Icon: Eye, value: student.profileViews ?? 0, label: "Profile Views", color: "text-[#38B6FF]", bg: "bg-blue-50 dark:bg-blue-900/20" },
+                { Icon: MessageCircle, value: student.whatsappClicks ?? 0, label: "WhatsApp Clicks", color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
+                {
+                  Icon: TrendingUp,
+                  value: applications.length > 0 ? `${Math.round((accepted.length / applications.length) * 100)}%` : "—",
+                  label: "Success Rate",
+                  color: "text-violet-500",
+                  bg: "bg-violet-50 dark:bg-violet-900/20",
+                },
+              ].map((s) => (
+                <div key={s.label} className={`${s.bg} rounded-2xl p-4 text-center`}>
+                  <div className="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center mx-auto mb-2 shadow-sm">
+                    <s.Icon className={`w-4 h-4 ${s.color}`} />
+                  </div>
+                  <p className="text-slate-900 dark:text-white text-lg" style={{ fontWeight: 900 }}>{s.value}</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-[11px]" style={{ fontWeight: 500 }}>{s.label}</p>
                 </div>
-                <p className="text-slate-900 dark:text-white text-lg" style={{ fontWeight: 900 }}>{s.value}</p>
-                <p className="text-slate-500 dark:text-slate-400 text-[11px]" style={{ fontWeight: 500 }}>{s.label}</p>
+              ))}
+            </div>
+
+            {!student.isPro && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-xl border border-amber-200/40 dark:border-amber-700/30 text-center">
+                  <div className="w-10 h-10 rounded-xl bg-[#FFC107]/15 flex items-center justify-center mx-auto mb-2">
+                    <Crown className="w-5 h-5 text-[#FFC107] fill-[#FFC107]" />
+                  </div>
+                  <p className="text-slate-900 dark:text-white text-sm mb-0.5" style={{ fontWeight: 800 }}>Pro Analytics</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-xs mb-3" style={{ fontWeight: 500 }}>See who's viewing &amp; clicking your profile</p>
+                  <a
+                    href={`mailto:skillz@zohomail.com?subject=Pro%20Upgrade%20Request&body=Hi%20Skillz%2C%20I%27d%20like%20to%20upgrade%20to%20Pro.%20My%20email%20is%3A%20${encodeURIComponent(student.email)}`}
+                    className="inline-flex items-center gap-1.5 bg-[#FFC107] text-slate-900 text-xs px-4 py-2 rounded-full hover:bg-[#FFD000] transition-colors shadow-sm"
+                    style={{ fontWeight: 800 }}>
+                    <Crown className="w-3 h-3 fill-slate-900" /> Upgrade — ₦2,000/mo
+                  </a>
+                </div>
               </div>
-            ))}
+            )}
           </div>
         </div>
 

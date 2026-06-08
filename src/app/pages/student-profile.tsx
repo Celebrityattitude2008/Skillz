@@ -504,84 +504,100 @@ export function StudentProfile() {
               </div>
 
               {isOwn ? (
-                <div>
-                  {!showAvailForm ? (
-                    <div>
-                      {student.availability?.days?.length ? (
+                student.isPro ? (
+                  <div>
+                    {!showAvailForm ? (
+                      <div>
+                        {student.availability?.days?.length ? (
+                          <div>
+                            <p className="text-slate-500 dark:text-slate-400 text-xs mb-2" style={{ fontWeight: 500 }}>Your availability:</p>
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              {student.availability.days.map((d) => (
+                                <span key={d} className="bg-blue-50 dark:bg-blue-900/20 text-[#38B6FF] text-xs px-2.5 py-1 rounded-lg" style={{ fontWeight: 600 }}>{d}</span>
+                              ))}
+                            </div>
+                            <p className="text-slate-400 dark:text-slate-500 text-xs" style={{ fontWeight: 500 }}>
+                              {student.availability.startTime} – {student.availability.endTime}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-slate-400 dark:text-slate-500 text-sm" style={{ fontWeight: 500 }}>No availability set yet.</p>
+                        )}
+                        <button onClick={() => setShowAvailForm(true)}
+                          className="mt-3 text-[#38B6FF] text-sm hover:text-[#1a9fe8] transition-colors"
+                          style={{ fontWeight: 600 }}>
+                          {student.availability?.days?.length ? "Edit" : "Set"} Availability
+                        </button>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleSaveAvailability} className="space-y-3">
                         <div>
-                          <p className="text-slate-500 dark:text-slate-400 text-xs mb-2" style={{ fontWeight: 500 }}>Your availability:</p>
-                          <div className="flex flex-wrap gap-1.5 mb-2">
-                            {student.availability.days.map((d) => (
-                              <span key={d} className="bg-blue-50 dark:bg-blue-900/20 text-[#38B6FF] text-xs px-2.5 py-1 rounded-lg" style={{ fontWeight: 600 }}>{d}</span>
+                          <p className="text-slate-700 dark:text-slate-300 text-xs mb-2" style={{ fontWeight: 600 }}>Available days</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {DAYS_OF_WEEK.map((day) => (
+                              <button key={day} type="button"
+                                onClick={() => setAvailDays((prev) =>
+                                  prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+                                )}
+                                className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${
+                                  availDays.includes(day)
+                                    ? "bg-[#38B6FF] text-white"
+                                    : "bg-blue-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400"
+                                }`}
+                                style={{ fontWeight: 600 }}>
+                                {day}
+                              </button>
                             ))}
                           </div>
-                          <p className="text-slate-400 dark:text-slate-500 text-xs" style={{ fontWeight: 500 }}>
-                            {student.availability.startTime} – {student.availability.endTime}
-                          </p>
                         </div>
-                      ) : (
-                        <p className="text-slate-400 dark:text-slate-500 text-sm" style={{ fontWeight: 500 }}>No availability set yet.</p>
-                      )}
-                      <button onClick={() => setShowAvailForm(true)}
-                        className="mt-3 text-[#38B6FF] text-sm hover:text-[#1a9fe8] transition-colors"
-                        style={{ fontWeight: 600 }}>
-                        {student.availability?.days?.length ? "Edit" : "Set"} Availability
-                      </button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <p className="text-slate-700 dark:text-slate-300 text-xs mb-1" style={{ fontWeight: 600 }}>From</p>
+                            <select value={availStart} onChange={(e) => setAvailStart(e.target.value)}
+                              className="w-full bg-blue-50/50 dark:bg-slate-700/50 rounded-xl px-2 py-2 text-slate-800 dark:text-white text-xs border border-blue-100/50 dark:border-slate-600/40 outline-none"
+                              style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}>
+                              {TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <p className="text-slate-700 dark:text-slate-300 text-xs mb-1" style={{ fontWeight: 600 }}>To</p>
+                            <select value={availEnd} onChange={(e) => setAvailEnd(e.target.value)}
+                              className="w-full bg-blue-50/50 dark:bg-slate-700/50 rounded-xl px-2 py-2 text-slate-800 dark:text-white text-xs border border-blue-100/50 dark:border-slate-600/40 outline-none"
+                              style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}>
+                              {TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button type="submit" disabled={savingAvail || availDays.length === 0}
+                            className="flex-1 bg-[#38B6FF] text-white py-2 rounded-xl text-xs hover:bg-[#1a9fe8] transition-colors disabled:opacity-50"
+                            style={{ fontWeight: 700 }}>
+                            {savingAvail ? "Saving…" : "Save"}
+                          </button>
+                          <button type="button" onClick={() => setShowAvailForm(false)}
+                            className="px-4 py-2 rounded-xl text-xs text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                            style={{ fontWeight: 600 }}>
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-2">
+                    <div className="w-10 h-10 rounded-xl bg-[#FFC107]/10 flex items-center justify-center mx-auto mb-3">
+                      <Crown className="w-5 h-5 text-[#FFC107] fill-[#FFC107]" />
                     </div>
-                  ) : (
-                    <form onSubmit={handleSaveAvailability} className="space-y-3">
-                      <div>
-                        <p className="text-slate-700 dark:text-slate-300 text-xs mb-2" style={{ fontWeight: 600 }}>Available days</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {DAYS_OF_WEEK.map((day) => (
-                            <button key={day} type="button"
-                              onClick={() => setAvailDays((prev) =>
-                                prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-                              )}
-                              className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${
-                                availDays.includes(day)
-                                  ? "bg-[#38B6FF] text-white"
-                                  : "bg-blue-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400"
-                              }`}
-                              style={{ fontWeight: 600 }}>
-                              {day}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <p className="text-slate-700 dark:text-slate-300 text-xs mb-1" style={{ fontWeight: 600 }}>From</p>
-                          <select value={availStart} onChange={(e) => setAvailStart(e.target.value)}
-                            className="w-full bg-blue-50/50 dark:bg-slate-700/50 rounded-xl px-2 py-2 text-slate-800 dark:text-white text-xs border border-blue-100/50 dark:border-slate-600/40 outline-none"
-                            style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}>
-                            {TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <p className="text-slate-700 dark:text-slate-300 text-xs mb-1" style={{ fontWeight: 600 }}>To</p>
-                          <select value={availEnd} onChange={(e) => setAvailEnd(e.target.value)}
-                            className="w-full bg-blue-50/50 dark:bg-slate-700/50 rounded-xl px-2 py-2 text-slate-800 dark:text-white text-xs border border-blue-100/50 dark:border-slate-600/40 outline-none"
-                            style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}>
-                            {TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
-                          </select>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button type="submit" disabled={savingAvail || availDays.length === 0}
-                          className="flex-1 bg-[#38B6FF] text-white py-2 rounded-xl text-xs hover:bg-[#1a9fe8] transition-colors disabled:opacity-50"
-                          style={{ fontWeight: 700 }}>
-                          {savingAvail ? "Saving…" : "Save"}
-                        </button>
-                        <button type="button" onClick={() => setShowAvailForm(false)}
-                          className="px-4 py-2 rounded-xl text-xs text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                          style={{ fontWeight: 600 }}>
-                          Cancel
-                        </button>
-                      </div>
-                    </form>
-                  )}
-                </div>
+                    <p className="text-slate-800 dark:text-slate-200 text-sm mb-1" style={{ fontWeight: 700 }}>Pro Feature</p>
+                    <p className="text-slate-500 dark:text-slate-400 text-xs mb-3" style={{ fontWeight: 500 }}>Upgrade to Pro to set your booking availability and let clients schedule slots</p>
+                    <a
+                      href={`mailto:skillz@zohomail.com?subject=Pro%20Upgrade%20Request&body=Hi%20Skillz%2C%20I%27d%20like%20to%20upgrade%20to%20Pro.%20My%20email%20is%3A%20${encodeURIComponent(student.email)}`}
+                      className="inline-flex items-center gap-1.5 bg-[#FFC107] text-slate-900 text-xs px-3 py-2 rounded-full hover:bg-[#FFD000] transition-colors shadow-sm"
+                      style={{ fontWeight: 800 }}>
+                      <Crown className="w-3 h-3 fill-slate-900" /> Upgrade — ₦2,000/mo
+                    </a>
+                  </div>
+                )
               ) : student.availability?.days?.length ? (
                 <div>
                   <p className="text-slate-500 dark:text-slate-400 text-xs mb-3" style={{ fontWeight: 500 }}>

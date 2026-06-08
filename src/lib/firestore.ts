@@ -368,3 +368,8 @@ export async function updateAvailability(
 ): Promise<void> {
   await updateDoc(doc(db, 'students', studentId), { availability });
 }
+
+// ── Pro toggle ─────────────────────────────────────────────────────────────────
+export async function toggleStudentPro(studentId: string, isPro: boolean): Promise<void> {
+  await updateDoc(doc(db, 'students', studentId), { isPro });
+}
