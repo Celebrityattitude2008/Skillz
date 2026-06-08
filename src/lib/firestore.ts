@@ -373,3 +373,61 @@ export async function updateAvailability(
 export async function toggleStudentPro(studentId: string, isPro: boolean): Promise<void> {
   await updateDoc(doc(db, 'students', studentId), { isPro });
 }
+
+// ── Referrals ──────────────────────────────────────────────────────────────────
+export interface Referral {
+  id?: string;
+  referrerId: string;
+  referrerUid: string;
+  refereeUid: string;
+  refereeEmail: string;
+  createdAt: number;
+}
+
+export async function trackReferral(
+  referralCode: string,
+  refereeUid: string,
+  refereeEmail: string
+): Promise<void> {
+  try {
+    // referralCode is the referrer's student doc ID
+    const referrerSnap = await getDoc(doc(db, 'students', referralCode));
+    if (!referrerSnap.exists()) return;
+    const referrer = referrerSnap.data() as StudentProfile;
+
+    // Prevent self-referral
+    if (referrer.uid === refereeUid) return;
+
+    // Prevent duplicate referrals for this referee
+    const existing = await getDocs(
+      query(collection(db, 'referrals'), where('refereeUid', '==', refereeUid))
+    );
+    if (!existing.empty) return;
+
+    await addDoc(collection(db, 'referrals'), {
+      referrerId: referralCode,
+      referrerUid: referrer.uid || '',
+      refereeUid,
+      refereeEmail,
+      createdAt: Date.now(),
+    });
+
+    // Notify the referrer
+    if (referrer.uid) {
+      await addDoc(collection(db, 'notifications'), {
+        userId: referrer.uid,
+        type: 'new_review',
+        message: `🎉 Someone signed up using your referral link! You've earned ₦500 off Pro.`,
+        link: '/dashboard',
+        read: false,
+        createdAt: Date.now(),
+      });
+    }
+  } catch { /* silent */ }
+}
+
+export async function getReferralsByStudent(studentId: string): Promise<Referral[]> {
+  const q = query(collection(db, 'referrals'), where('referrerId', '==', studentId));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Referral));
+}

@@ -3,10 +3,11 @@ import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import {
   Briefcase, CheckCircle, Clock, XCircle, Star, TrendingUp, User,
   FileText, Zap, ChevronRight, Loader2, AlertCircle, Crown, Eye, MessageCircle, BarChart2,
+  Gift, Copy, Check, Users,
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router";
-import { getStudentByUid, getStudentByEmail, getApplicationsByStudent, type StudentProfile, type Application } from "../../lib/firestore";
+import { getStudentByUid, getStudentByEmail, getApplicationsByStudent, getReferralsByStudent, type StudentProfile, type Application, type Referral } from "../../lib/firestore";
 import { useAuth } from "../../lib/auth-context";
 
 function completionScore(s: StudentProfile): { score: number; items: { label: string; done: boolean; pts: number }[] } {
@@ -39,7 +40,9 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const [student, setStudent] = useState<StudentProfile | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth", { replace: true });
@@ -58,12 +61,25 @@ export function DashboardPage() {
     ]).then(([s, apps]) => {
       setStudent(s);
       setApplications(apps);
+      if (s?.id) getReferralsByStudent(s.id).then(setReferrals).catch(() => {});
     }).catch(() => {}).finally(() => setLoading(false));
   }, [user]);
 
   const completion = useMemo(() => student ? completionScore(student) : null, [student]);
   const accepted = applications.filter((a) => a.status === "Accepted");
   const pending = applications.filter((a) => a.status === "Pending");
+
+  const referralLink = student?.id
+    ? `${window.location.origin}/auth?ref=${student.id}`
+    : "";
+  const referralDiscount = referrals.length * 500;
+  const handleCopyLink = () => {
+    if (!referralLink) return;
+    navigator.clipboard.writeText(referralLink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   if (authLoading || loading) {
     return (
@@ -340,6 +356,87 @@ export function DashboardPage() {
                     <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 ml-auto group-hover:text-slate-500 dark:group-hover:text-slate-400 transition-colors" />
                   </Link>
                 ))}
+              </div>
+            </div>
+
+            {/* Refer & Earn */}
+            <div className="bg-gradient-to-br from-[#FFC107] via-[#ffb300] to-[#ff9f00] rounded-3xl p-6 shadow-lg shadow-amber-300/25 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/15 -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-16 h-16 rounded-full bg-white/10 translate-y-1/2 -translate-x-1/2" />
+              <div className="relative">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-9 h-9 rounded-xl bg-white/30 backdrop-blur-sm flex items-center justify-center shadow-sm">
+                    <Gift className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-slate-900 text-sm leading-tight" style={{ fontWeight: 900 }}>Refer & Earn</h3>
+                    <p className="text-slate-700 text-[11px]" style={{ fontWeight: 500 }}>₦500 off Pro per referral</p>
+                  </div>
+                </div>
+
+                {/* Stats row */}
+                <div className="flex gap-3 mb-4">
+                  <div className="flex-1 bg-white/25 backdrop-blur-sm rounded-xl p-2.5 text-center">
+                    <div className="flex items-center justify-center gap-1 mb-0.5">
+                      <Users className="w-3.5 h-3.5 text-slate-900" />
+                    </div>
+                    <p className="text-slate-900 text-lg leading-none" style={{ fontWeight: 900 }}>{referrals.length}</p>
+                    <p className="text-slate-700 text-[10px]" style={{ fontWeight: 600 }}>Referrals</p>
+                  </div>
+                  <div className="flex-1 bg-white/25 backdrop-blur-sm rounded-xl p-2.5 text-center">
+                    <div className="flex items-center justify-center gap-0.5 mb-0.5">
+                      <span className="text-slate-900 text-[10px]" style={{ fontWeight: 700 }}>₦</span>
+                    </div>
+                    <p className="text-slate-900 text-lg leading-none" style={{ fontWeight: 900 }}>
+                      {referralDiscount > 0 ? `${referralDiscount.toLocaleString()}` : "0"}
+                    </p>
+                    <p className="text-slate-700 text-[10px]" style={{ fontWeight: 600 }}>Saved</p>
+                  </div>
+                  <div className="flex-1 bg-white/25 backdrop-blur-sm rounded-xl p-2.5 text-center">
+                    <div className="flex items-center justify-center mb-0.5">
+                      <Crown className="w-3.5 h-3.5 text-slate-900 fill-slate-900" />
+                    </div>
+                    <p className="text-slate-900 text-lg leading-none" style={{ fontWeight: 900 }}>
+                      {Math.max(0, 3 - referrals.length)}
+                    </p>
+                    <p className="text-slate-700 text-[10px]" style={{ fontWeight: 600 }}>to Free Pro</p>
+                  </div>
+                </div>
+
+                {/* Referral link */}
+                {referralLink && (
+                  <div className="bg-white/30 backdrop-blur-sm rounded-2xl p-1 flex items-center gap-2 mb-3">
+                    <p className="flex-1 text-slate-800 text-[11px] px-2 truncate" style={{ fontWeight: 600 }}>
+                      {referralLink.replace(/^https?:\/\//, "")}
+                    </p>
+                    <button
+                      onClick={handleCopyLink}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] transition-all flex-shrink-0 ${
+                        copied
+                          ? "bg-emerald-500 text-white"
+                          : "bg-slate-900 text-white hover:bg-slate-800"
+                      }`}
+                      style={{ fontWeight: 700 }}>
+                      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                      {copied ? "Copied!" : "Copy"}
+                    </button>
+                  </div>
+                )}
+
+                {referrals.length >= 3 ? (
+                  <a
+                    href={`mailto:skillz@zohomail.com?subject=Free%20Pro%20Month%20-%20${referrals.length}%20Referrals&body=Hi%20Skillz%20team%2C%20I%20have%20${referrals.length}%20successful%20referrals%20and%20would%20like%20to%20claim%20my%20free%20Pro%20month.%20My%20email%3A%20${encodeURIComponent(student.email)}`}
+                    className="block w-full text-center bg-slate-900 text-white py-2.5 rounded-xl text-sm hover:bg-slate-800 transition-colors"
+                    style={{ fontWeight: 700 }}>
+                    Claim Free Pro Month!
+                  </a>
+                ) : (
+                  <p className="text-slate-700 text-[11px] text-center" style={{ fontWeight: 500 }}>
+                    {referrals.length === 0
+                      ? "Share your link — each sign-up earns ₦500 off Pro"
+                      : `${3 - referrals.length} more referral${3 - referrals.length !== 1 ? "s" : ""} = 1 month free Pro!`}
+                  </p>
+                )}
               </div>
             </div>
           </div>

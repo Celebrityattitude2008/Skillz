@@ -80,5 +80,15 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
     }
+
+    match /referrals/{referralId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.referrerUid ||
+        request.auth.uid == resource.data.refereeUid ||
+        isAdmin()
+      );
+      allow create: if isSignedIn() && request.resource.data.refereeUid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
   }
 }

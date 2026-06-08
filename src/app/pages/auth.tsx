@@ -1,16 +1,20 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useLocation } from "react-router";
 import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
   signInWithPopup, updateProfile,
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, db, googleProvider } from "../../lib/firebase";
-import { Zap, Mail, Lock, User, Eye, EyeOff, AlertCircle, Chrome, GraduationCap, ChevronDown } from "lucide-react";
+import { trackReferral } from "../../lib/firestore";
+import { Zap, Mail, Lock, User, Eye, EyeOff, AlertCircle, Chrome, GraduationCap, ChevronDown, Gift } from "lucide-react";
 import { NIGERIAN_UNIVERSITIES } from "../../lib/nigerian-universities";
+
+const REF_KEY = "skillz_ref";
 
 export function AuthPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -20,6 +24,19 @@ export function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [refCode, setRefCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      localStorage.setItem(REF_KEY, ref);
+      setRefCode(ref);
+      setMode("signup");
+    } else {
+      setRefCode(localStorage.getItem(REF_KEY));
+    }
+  }, [location.search]);
 
   const friendlyError = (code: string) => {
     const map: Record<string, string> = {
@@ -33,6 +50,13 @@ export function AuthPage() {
       "auth/popup-closed-by-user": "Google sign-in was cancelled.",
     };
     return map[code] || "Something went wrong. Please try again.";
+  };
+
+  const applyReferral = async (uid: string, userEmail: string) => {
+    const code = localStorage.getItem(REF_KEY);
+    if (!code) return;
+    await trackReferral(code, uid, userEmail);
+    localStorage.removeItem(REF_KEY);
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -50,6 +74,7 @@ export function AuthPage() {
           joinDate: new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }),
           gigs: 0, image: "",
         });
+        await applyReferral(cred.user.uid, email);
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
@@ -67,7 +92,8 @@ export function AuthPage() {
     try {
       const cred = await signInWithPopup(auth, googleProvider);
       const snap = await getDoc(doc(db, "users", cred.user.uid));
-      if (!snap.exists()) {
+      const isNew = !snap.exists();
+      if (isNew) {
         await setDoc(doc(db, "users", cred.user.uid), {
           name: cred.user.displayName || "",
           email: cred.user.email || "",
@@ -76,6 +102,7 @@ export function AuthPage() {
           joinDate: new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }),
           gigs: 0, image: cred.user.photoURL || "",
         });
+        await applyReferral(cred.user.uid, cred.user.email || "");
       }
       navigate("/");
     } catch (err: any) {
@@ -102,6 +129,21 @@ export function AuthPage() {
             {mode === "login" ? "Welcome back! Sign in to continue." : "Join campus students and clients."}
           </p>
         </div>
+
+        {/* Referral banner */}
+        {refCode && mode === "signup" && (
+          <div className="flex items-center gap-3 bg-gradient-to-r from-[#FFC107]/15 to-amber-50/80 dark:from-[#FFC107]/10 dark:to-amber-900/10 border border-[#FFC107]/30 rounded-2xl px-4 py-3 mb-5 shadow-sm">
+            <div className="w-9 h-9 rounded-xl bg-[#FFC107] flex items-center justify-center flex-shrink-0 shadow-sm">
+              <Gift className="w-4 h-4 text-slate-900" />
+            </div>
+            <div>
+              <p className="text-slate-900 dark:text-white text-sm" style={{ fontWeight: 800 }}>You were referred!</p>
+              <p className="text-slate-600 dark:text-slate-300 text-xs" style={{ fontWeight: 500 }}>
+                Sign up now — your friend earns ₦500 off Pro for referring you.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Card */}
         <div className="bg-white dark:bg-slate-800/90 rounded-3xl shadow-2xl shadow-blue-200/30 dark:shadow-slate-900/60 border border-white/60 dark:border-slate-700/40 overflow-hidden">
