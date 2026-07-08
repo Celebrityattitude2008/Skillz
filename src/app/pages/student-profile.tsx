@@ -448,7 +448,7 @@ export function StudentProfile() {
                   { value: student.education.gpa.split(" ")[0], label: "Academic GPA" },
                 ].map((stat, i) => (
                   <div key={i} className={i > 0 ? "border-t border-white/20 pt-4" : ""}>
-                    <p className="text-3xl" style={{ fontWeight: 900 }}>{stat.value}</p>
+                    <p className="text-2xl sm:text-3xl" style={{ fontWeight: 900 }}>{stat.value}</p>
                     <p className="text-white/70 text-sm" style={{ fontWeight: 500 }}>{stat.label}</p>
                   </div>
                 ))}

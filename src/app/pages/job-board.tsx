@@ -134,7 +134,7 @@ function GigDetailModal({ gig, onClose, onGigUpdate, onGigDelete }: { gig: Gig; 
         </div>
 
         <div className="p-7 space-y-5">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
               { icon: <DollarSign className="w-4 h-4" />, label: "Budget", value: gig.budget, color: "text-[#38B6FF]" },
               { icon: <Users className="w-4 h-4" />, label: "Applicants", value: `${gig.applicants} applied`, color: "text-violet-500" },
@@ -541,7 +541,7 @@ export function JobBoard() {
                   style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1" style={{ fontWeight: 700 }}>
                     <Tag className="w-3 h-3" /> CATEGORY

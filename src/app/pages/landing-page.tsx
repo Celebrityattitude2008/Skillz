@@ -3,7 +3,7 @@ import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import {
   ArrowRight, Search, Star, TrendingUp, Users, ChevronRight, MapPin, Sparkles,
   Palette, Code2, PenLine, Camera, Video, Music, Megaphone, Briefcase,
-  UserPlus, Banknote, Zap,
+  UserPlus, Banknote, Zap, Crown, BarChart2, Calendar,
 } from "lucide-react";
 import { Link } from "react-router";
 import { useState, useEffect } from "react";
@@ -75,7 +75,7 @@ export function LandingPage() {
               </div>
 
               <div className="space-y-3">
-                <h1 className="text-5xl lg:text-6xl text-white leading-[1.1]" style={{ fontWeight: 900 }}>
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl text-white leading-[1.1]" style={{ fontWeight: 900 }}>
                   Discover<br />
                   <span className="text-[#FFC107]">Campus</span><br />
                   Talent
@@ -370,13 +370,15 @@ export function LandingPage() {
             </p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               {[
-                { emoji: "👑", title: "Gold Pro Badge", desc: "Verified crown on every listing" },
-                { emoji: "🚀", title: "Search Boost", desc: "Appear at the top of results" },
-                { emoji: "📊", title: "Analytics", desc: "See who views your profile" },
-                { emoji: "📅", title: "Booking Calendar", desc: "Let clients book time slots" },
+                { Icon: Crown, title: "Gold Pro Badge", desc: "Verified crown on every listing" },
+                { Icon: TrendingUp, title: "Search Boost", desc: "Appear at the top of results" },
+                { Icon: BarChart2, title: "Analytics", desc: "See who views your profile" },
+                { Icon: Calendar, title: "Booking Calendar", desc: "Let clients book time slots" },
               ].map((f) => (
                 <div key={f.title} className="bg-white/5 border border-white/10 rounded-2xl p-4 hover:bg-white/8 transition-colors">
-                  <span className="text-2xl mb-2 block">{f.emoji}</span>
+                  <div className="w-9 h-9 rounded-xl bg-[#FFC107]/15 flex items-center justify-center mb-2.5">
+                    <f.Icon className="w-4 h-4 text-[#FFC107]" />
+                  </div>
                   <p className="text-white text-sm mb-1" style={{ fontWeight: 700 }}>{f.title}</p>
                   <p className="text-slate-400 text-xs" style={{ fontWeight: 500 }}>{f.desc}</p>
                 </div>

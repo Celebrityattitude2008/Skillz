@@ -98,7 +98,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl shadow-blue-100/30 dark:shadow-slate-900/60 border border-blue-100/50 dark:border-slate-700/50 overflow-hidden z-50" style={{ fontFamily: "'Nunito', sans-serif" }}>
+        <div className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 top-16 sm:top-full mt-0 sm:mt-2 w-auto sm:w-80 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl shadow-blue-100/30 dark:shadow-slate-900/60 border border-blue-100/50 dark:border-slate-700/50 overflow-hidden z-50" style={{ fontFamily: "'Nunito', sans-serif" }}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-blue-50 dark:border-slate-700/60">
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-[#38B6FF]" />

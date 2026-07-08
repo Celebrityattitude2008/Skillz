@@ -167,7 +167,7 @@ export function AdminPanel() {
             <div className="w-10 h-10 rounded-2xl bg-[#38B6FF]/20 border border-[#38B6FF]/30 flex items-center justify-center">
               <Shield className="w-5 h-5 text-[#38B6FF]" />
             </div>
-            <h1 className="text-white text-4xl" style={{ fontWeight: 900 }}>Admin Panel</h1>
+            <h1 className="text-white text-2xl sm:text-4xl" style={{ fontWeight: 900 }}>Admin Panel</h1>
           </div>
           <p className="text-white/60 mb-7" style={{ fontWeight: 500 }}>Manage users, verifications and platform content</p>
 

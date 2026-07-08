@@ -213,7 +213,7 @@ export function ProfileEditor() {
             <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center">
               <Palette className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-white text-4xl" style={{ fontWeight: 900 }}>My Profile</h1>
+            <h1 className="text-white text-2xl sm:text-4xl" style={{ fontWeight: 900 }}>My Profile</h1>
           </div>
           <p className="text-white/80" style={{ fontWeight: 500 }}>Build your campus profile and attract clients</p>
         </div>

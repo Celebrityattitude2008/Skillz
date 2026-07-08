@@ -51,13 +51,14 @@ export function ProUpgradeModal() {
     >
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShow(false)} />
 
-      <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl shadow-slate-900/40 w-full max-w-md overflow-hidden animate-[slideUp_0.4s_ease-out]">
-        <div className="bg-gradient-to-br from-[#FFC107] via-[#ffb300] to-[#ff8f00] p-6 relative overflow-hidden">
+      <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl shadow-slate-900/40 w-full max-w-md max-h-[90vh] overflow-y-auto animate-[slideUp_0.4s_ease-out]">
+        <div className="bg-gradient-to-br from-[#FFC107] via-[#ffb300] to-[#ff8f00] p-6 relative overflow-hidden sticky top-0 rounded-t-3xl">
           <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/15 -translate-y-1/2 translate-x-1/2" />
           <div className="absolute bottom-0 left-0 w-20 h-20 rounded-full bg-white/10 translate-y-1/2 -translate-x-1/2" />
           <button
             onClick={() => setShow(false)}
-            className="absolute top-4 right-4 w-7 h-7 rounded-full bg-black/20 flex items-center justify-center text-white hover:bg-black/30 transition-colors z-10"
+            aria-label="Close"
+            className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/20 flex items-center justify-center text-white hover:bg-black/30 transition-colors z-10"
           >
             <X className="w-4 h-4" />
           </button>

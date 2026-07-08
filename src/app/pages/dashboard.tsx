@@ -144,7 +144,7 @@ export function DashboardPage() {
             <div>
               <p className="text-white/70 text-sm mb-0.5" style={{ fontWeight: 500 }}>Welcome back 👋</p>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-white text-3xl" style={{ fontWeight: 900 }}>{student.name}</h1>
+                <h1 className="text-white text-xl sm:text-3xl" style={{ fontWeight: 900 }}>{student.name}</h1>
                 {student.isPro && (
                   <span className="flex items-center gap-1 bg-[#FFC107] text-slate-900 text-xs px-2.5 py-1 rounded-full shadow-lg" style={{ fontWeight: 800 }}>
                     <Crown className="w-3 h-3 fill-slate-900" /> Pro

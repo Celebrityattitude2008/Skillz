@@ -134,7 +134,7 @@ export function ProfilesPage() {
             <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center">
               <Users className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-white text-4xl" style={{ fontWeight: 900 }}>Student Profiles</h1>
+            <h1 className="text-white text-2xl sm:text-4xl" style={{ fontWeight: 900 }}>Student Profiles</h1>
           </div>
           <p className="text-white/80 mb-7" style={{ fontWeight: 500 }}>
             {loading ? "Loading talent…" : `${students.length} verified students ready to work`}
@@ -198,7 +198,7 @@ export function ProfilesPage() {
           </div>
 
           {/* University filter */}
-          <div className="flex items-center gap-2 bg-white dark:bg-slate-800/80 rounded-xl px-3 py-2 shadow-sm border border-white/60 dark:border-slate-700/40 flex-1 min-w-[200px] max-w-xs">
+          <div className="flex items-center gap-2 bg-white dark:bg-slate-800/80 rounded-xl px-3 py-2 shadow-sm border border-white/60 dark:border-slate-700/40 w-full sm:flex-1 sm:min-w-[200px] sm:max-w-xs">
             <select value={university} onChange={(e) => setUniversity(e.target.value)}
               className="text-sm text-slate-800 dark:text-slate-200 outline-none bg-transparent w-full"
               style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 600 }}>
@@ -237,7 +237,7 @@ export function ProfilesPage() {
         </p>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
+          <div className="flex items-center justify-center py-14 sm:py-20">
             <div className="text-center space-y-3">
               <Loader2 className="w-10 h-10 text-[#38B6FF] animate-spin mx-auto" />
               <p className="text-slate-500 dark:text-slate-400 text-sm" style={{ fontWeight: 500 }}>Loading talent…</p>
