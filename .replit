@@ -42,3 +42,9 @@ publicDir = "dist"
 [userenv]
 
 [userenv.shared]
+VITE_FIREBASE_API_KEY = "AIzaSyCpGjpgNosIfhChX7Zry61T8-r1EGqF45U"
+VITE_FIREBASE_AUTH_DOMAIN = "skillz-a8bd5.firebaseapp.com"
+VITE_FIREBASE_PROJECT_ID = "skillz-a8bd5"
+VITE_FIREBASE_STORAGE_BUCKET = "skillz-a8bd5.firebasestorage.app"
+VITE_FIREBASE_MESSAGING_SENDER_ID = "584905089807"
+VITE_FIREBASE_APP_ID = "1:584905089807:web:f6e88651c6dbbd8145947a"
