@@ -11,32 +11,22 @@ const PRO_BENEFITS = [
   { Icon: Star, label: "Featured on Homepage", desc: "Get spotlighted in the Student of the Week section", color: "text-orange-400" },
 ];
 
-const SESSION_KEY = "skillz_pro_modal_shown";
-
 export function ProUpgradeModal() {
   const { user } = useAuth();
   const [show, setShow] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-    const shown = sessionStorage.getItem(SESSION_KEY);
-    if (shown) return;
 
     let timer: ReturnType<typeof setTimeout>;
 
     getStudentByUid(user.uid)
       .then((student) => {
         if (student?.isPro) return;
-        timer = setTimeout(() => {
-          setShow(true);
-          sessionStorage.setItem(SESSION_KEY, "1");
-        }, 3500);
+        timer = setTimeout(() => setShow(true), 2500);
       })
       .catch(() => {
-        timer = setTimeout(() => {
-          setShow(true);
-          sessionStorage.setItem(SESSION_KEY, "1");
-        }, 3500);
+        timer = setTimeout(() => setShow(true), 2500);
       });
 
     return () => clearTimeout(timer);

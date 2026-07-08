@@ -387,19 +387,19 @@ export function JobBoard() {
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-3 gap-3 mb-8">
           {[
             { Icon: Briefcase, value: gigs.length.toString(), label: "Active Gigs", color: "from-[#38B6FF] to-[#1a9fe8]" },
             { Icon: Users, value: studentCount > 0 ? studentCount.toString() : "—", label: "Students", color: "from-violet-400 to-purple-500" },
             { Icon: DollarSign, value: `${gigs.filter(g => g.status === "Completed").length}`, label: "Completed Gigs", color: "from-emerald-400 to-teal-500" },
           ].map((stat) => (
-            <div key={stat.label} className="bg-white dark:bg-slate-800/80 rounded-2xl p-4 shadow-sm shadow-blue-100/20 dark:shadow-slate-900/30 border border-white/60 dark:border-slate-700/40 flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-white shadow-md`}>
-                <stat.Icon className="w-5 h-5" />
+            <div key={stat.label} className="bg-white dark:bg-slate-800/80 rounded-2xl p-3 sm:p-4 shadow-sm shadow-blue-100/20 dark:shadow-slate-900/30 border border-white/60 dark:border-slate-700/40 flex flex-col items-center text-center gap-2 sm:flex-row sm:text-left sm:gap-3">
+              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-white shadow-md flex-shrink-0`}>
+                <stat.Icon className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <p className="text-slate-900 dark:text-white" style={{ fontWeight: 800 }}>{stat.value}</p>
-                <p className="text-slate-500 dark:text-slate-400 text-xs" style={{ fontWeight: 500 }}>{stat.label}</p>
+                <p className="text-slate-900 dark:text-white text-sm sm:text-base" style={{ fontWeight: 800 }}>{stat.value}</p>
+                <p className="text-slate-500 dark:text-slate-400 text-[10px] sm:text-xs leading-tight" style={{ fontWeight: 500 }}>{stat.label}</p>
               </div>
             </div>
           ))}
