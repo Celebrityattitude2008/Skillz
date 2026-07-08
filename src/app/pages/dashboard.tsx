@@ -9,6 +9,8 @@ import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router";
 import { getStudentByUid, getStudentByEmail, getApplicationsByStudent, getReferralsByStudent, type StudentProfile, type Application, type Referral } from "../../lib/firestore";
 import { useAuth } from "../../lib/auth-context";
+import { ProfileChecklistPreview } from "../components/profile-checklist-preview";
+import { QuoteCard } from "../components/quote-card";
 
 function completionScore(s: StudentProfile): { score: number; items: { label: string; done: boolean; pts: number }[] } {
   const items = [
@@ -96,8 +98,8 @@ export function DashboardPage() {
     return (
       <div className="min-h-screen page-bg" style={{ fontFamily: "'Nunito', sans-serif" }}>
         <Navbar />
-        <div className="flex items-center justify-center min-h-[70vh] p-4">
-          <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-xl border border-white/60 dark:border-slate-700/40 p-12 text-center max-w-md">
+        <div className="max-w-4xl mx-auto px-4 py-10 space-y-6">
+          <div className="bg-white dark:bg-slate-800/80 rounded-3xl shadow-xl border border-white/60 dark:border-slate-700/40 p-12 text-center">
             <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-slate-700/50 flex items-center justify-center mx-auto mb-5">
               <User className="w-8 h-8 text-[#38B6FF]" />
             </div>
@@ -110,6 +112,11 @@ export function DashboardPage() {
               style={{ fontWeight: 700 }}>
               Create Profile <ChevronRight className="w-4 h-4" />
             </Link>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-6">
+            <ProfileChecklistPreview />
+            <QuoteCard />
           </div>
         </div>
       </div>
