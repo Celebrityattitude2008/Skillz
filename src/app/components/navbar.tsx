@@ -6,7 +6,6 @@ import { auth, ADMIN_EMAIL } from "../../lib/firebase";
 import { useAuth } from "../../lib/auth-context";
 import { useTheme } from "../../lib/theme-context";
 import { NotificationBell } from "./notification-bell";
-import { ProUpgradeModal } from "./pro-upgrade-modal";
 
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -200,8 +199,6 @@ export function Navbar() {
           </button>
         </div>
       </div>
-
-      <ProUpgradeModal />
 
       {/* Mobile menu */}
       {menuOpen && (

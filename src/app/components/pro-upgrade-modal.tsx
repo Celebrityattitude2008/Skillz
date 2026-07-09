@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Crown, X, BarChart2, Calendar, TrendingUp, Star, CheckCircle } from "lucide-react";
+import { useLocation } from "react-router";
 import { useAuth } from "../../lib/auth-context";
 import { getStudentByUid } from "../../lib/firestore";
 
@@ -13,10 +14,12 @@ const PRO_BENEFITS = [
 
 export function ProUpgradeModal() {
   const { user } = useAuth();
+  const location = useLocation();
   const [show, setShow] = useState(false);
 
   useEffect(() => {
     if (!user) return;
+    setShow(false);
 
     let timer: ReturnType<typeof setTimeout>;
 
@@ -30,7 +33,7 @@ export function ProUpgradeModal() {
       });
 
     return () => clearTimeout(timer);
-  }, [user]);
+  }, [user, location.pathname]);
 
   if (!show) return null;
 
