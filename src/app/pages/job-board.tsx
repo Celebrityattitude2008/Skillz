@@ -4,6 +4,7 @@ import {
   Search, Plus, MapPin, Clock, Users, Briefcase, DollarSign, X,
   Palette, Code2, PenLine, Camera, Megaphone, LayoutGrid, FileText, LogIn, Tag,
   CheckCircle, XCircle, SendHorizontal, Loader2, ChevronDown,
+  Link2 as LinkIcon, MessageCircle, Mail,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
@@ -172,6 +173,52 @@ function GigDetailModal({ gig, onClose, onGigUpdate, onGigDelete }: { gig: Gig; 
             </div>
           </div>
 
+          {/* Contact / Apply options set by the client */}
+          {(gig.applyLink || gig.applyWhatsapp || gig.applyEmail) && (
+            <div className="border border-emerald-100 dark:border-emerald-800/30 bg-emerald-50/60 dark:bg-emerald-900/10 rounded-2xl p-4 space-y-2.5">
+              <p className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wide" style={{ fontWeight: 700 }}>How to Apply</p>
+              {gig.applyLink && (
+                <a href={gig.applyLink} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-700/60 rounded-xl hover:shadow-md transition-all group border border-white/60 dark:border-slate-600/40">
+                  <div className="w-8 h-8 rounded-lg bg-[#38B6FF]/10 flex items-center justify-center flex-shrink-0">
+                    <LinkIcon className="w-4 h-4 text-[#38B6FF]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-900 dark:text-white text-sm truncate" style={{ fontWeight: 700 }}>Apply via Link</p>
+                    <p className="text-slate-400 text-xs truncate">{gig.applyLink}</p>
+                  </div>
+                  <span className="text-[#38B6FF] text-xs group-hover:translate-x-0.5 transition-transform" style={{ fontWeight: 600 }}>Open →</span>
+                </a>
+              )}
+              {gig.applyWhatsapp && (
+                <a href={`https://wa.me/${gig.applyWhatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-700/60 rounded-xl hover:shadow-md transition-all group border border-white/60 dark:border-slate-600/40">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                    <MessageCircle className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-900 dark:text-white text-sm" style={{ fontWeight: 700 }}>Chat on WhatsApp</p>
+                    <p className="text-slate-400 text-xs">{gig.applyWhatsapp}</p>
+                  </div>
+                  <span className="text-emerald-600 text-xs group-hover:translate-x-0.5 transition-transform" style={{ fontWeight: 600 }}>Open →</span>
+                </a>
+              )}
+              {gig.applyEmail && (
+                <a href={`mailto:${gig.applyEmail}?subject=Application%20for%20${encodeURIComponent(gig.title)}`}
+                  className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-700/60 rounded-xl hover:shadow-md transition-all group border border-white/60 dark:border-slate-600/40">
+                  <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0">
+                    <Mail className="w-4 h-4 text-violet-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-900 dark:text-white text-sm" style={{ fontWeight: 700 }}>Send Email</p>
+                    <p className="text-slate-400 text-xs truncate">{gig.applyEmail}</p>
+                  </div>
+                  <span className="text-violet-500 text-xs group-hover:translate-x-0.5 transition-transform" style={{ fontWeight: 600 }}>Open →</span>
+                </a>
+              )}
+            </div>
+          )}
+
           {isOwner && (
             <div className="border-t border-blue-50 dark:border-slate-700/60 pt-5 space-y-4">
               <div className="flex items-center justify-between">
@@ -303,7 +350,7 @@ export function JobBoard() {
   const [studentCount, setStudentCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
-  const [form, setForm] = useState({ title: "", company: "", budget: "", description: "", category: "Design", location: "Remote", deadline: "" });
+  const [form, setForm] = useState({ title: "", company: "", budget: "", description: "", category: "Design", location: "Remote", deadline: "", applyLink: "", applyWhatsapp: "", applyEmail: "" });
   const [gigSkills, setGigSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState("");
 
@@ -330,16 +377,33 @@ export function JobBoard() {
     if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addGigSkill(); }
   };
 
+  const [contactError, setContactError] = useState("");
+
   const handlePostGig = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) { setShowPostForm(false); return; }
+    if (!form.applyLink && !form.applyWhatsapp && !form.applyEmail) {
+      setContactError("Please provide at least one way for students to apply (link, WhatsApp, or email).");
+      return;
+    }
+    setContactError("");
     setPosting(true);
     try {
-      const newGig: Omit<Gig, "id"> = { ...form, skills: gigSkills, applicants: 0, postedDate: "Just now", postedBy: user.uid, status: "Open" };
+      const newGig: Omit<Gig, "id"> = {
+        ...form,
+        skills: gigSkills,
+        applicants: 0,
+        postedDate: "Just now",
+        postedBy: user.uid,
+        status: "Open",
+        applyLink: form.applyLink || undefined,
+        applyWhatsapp: form.applyWhatsapp || undefined,
+        applyEmail: form.applyEmail || undefined,
+      };
       const ref = await addGig(newGig);
       setGigs((prev) => [{ id: ref.id, ...newGig }, ...prev]);
       setShowPostForm(false);
-      setForm({ title: "", company: "", budget: "", description: "", category: "Design", location: "Remote", deadline: "" });
+      setForm({ title: "", company: "", budget: "", description: "", category: "Design", location: "Remote", deadline: "", applyLink: "", applyWhatsapp: "", applyEmail: "" });
       setGigSkills([]); setSkillInput("");
     } finally { setPosting(false); }
   };
@@ -594,6 +658,43 @@ export function JobBoard() {
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* How to Apply */}
+              <div className={`border rounded-2xl p-4 space-y-3 ${contactError ? "border-red-300 dark:border-red-700/50 bg-red-50/40 dark:bg-red-900/10" : "border-blue-100/60 dark:border-slate-600/40 bg-blue-50/40 dark:bg-slate-700/30"}`}>
+                <p className="text-xs text-slate-500 dark:text-slate-400" style={{ fontWeight: 700 }}>
+                  HOW SHOULD STUDENTS APPLY? <span className="text-slate-400 dark:text-slate-500 font-normal">(at least one required)</span>
+                </p>
+                {contactError && (
+                  <p className="text-red-500 text-xs" style={{ fontWeight: 600 }}>{contactError}</p>
+                )}
+                <div>
+                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1.5" style={{ fontWeight: 600 }}>
+                    <LinkIcon className="w-3 h-3" /> Application Link
+                  </label>
+                  <input type="url" placeholder="https://forms.gle/… or any apply URL"
+                    value={form.applyLink} onChange={(e) => setForm((f) => ({ ...f, applyLink: e.target.value }))}
+                    className="w-full bg-white dark:bg-slate-700/50 border border-blue-100/50 dark:border-slate-600/50 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#38B6FF]/25 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                    style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1.5" style={{ fontWeight: 600 }}>
+                    <MessageCircle className="w-3 h-3" /> WhatsApp Number
+                  </label>
+                  <input type="tel" placeholder="e.g. +2348012345678"
+                    value={form.applyWhatsapp} onChange={(e) => setForm((f) => ({ ...f, applyWhatsapp: e.target.value }))}
+                    className="w-full bg-white dark:bg-slate-700/50 border border-blue-100/50 dark:border-slate-600/50 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#38B6FF]/25 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                    style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1.5" style={{ fontWeight: 600 }}>
+                    <Mail className="w-3 h-3" /> Email Address
+                  </label>
+                  <input type="email" placeholder="e.g. hire@mybusiness.com"
+                    value={form.applyEmail} onChange={(e) => setForm((f) => ({ ...f, applyEmail: e.target.value }))}
+                    className="w-full bg-white dark:bg-slate-700/50 border border-blue-100/50 dark:border-slate-600/50 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#38B6FF]/25 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                    style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 500 }} />
+                </div>
               </div>
 
               <button type="submit" disabled={posting || !user}

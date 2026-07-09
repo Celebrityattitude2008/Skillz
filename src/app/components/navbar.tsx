@@ -146,12 +146,14 @@ export function Navbar() {
                     <LayoutDashboard className="w-4 h-4 text-[#38B6FF]" />
                     My Dashboard
                   </Link>
-                  <Link to="/profile/me" onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700/60 transition-colors"
-                    style={{ fontWeight: 600 }}>
-                    <Edit className="w-4 h-4 text-[#38B6FF]" />
-                    Edit My Profile
-                  </Link>
+                  {profile?.role !== "client" && (
+                    <Link to="/profile/me" onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700/60 transition-colors"
+                      style={{ fontWeight: 600 }}>
+                      <Edit className="w-4 h-4 text-[#38B6FF]" />
+                      Edit My Profile
+                    </Link>
+                  )}
                   <Link to="/profiles" onClick={() => setDropdownOpen(false)}
                     className="flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700/60 transition-colors"
                     style={{ fontWeight: 600 }}>
@@ -210,7 +212,7 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
-          {user && (
+          {user && profile?.role !== "client" && (
             <Link to="/profile/me" onClick={() => setMenuOpen(false)}
               className="flex items-center gap-2 px-4 py-3 rounded-2xl text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors"
               style={{ fontWeight: 600 }}>

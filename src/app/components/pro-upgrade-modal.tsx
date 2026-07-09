@@ -13,12 +13,14 @@ const PRO_BENEFITS = [
 ];
 
 export function ProUpgradeModal() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const location = useLocation();
   const [show, setShow] = useState(false);
 
   useEffect(() => {
     if (!user) return;
+    // Clients don't see the Pro modal — it's for students only
+    if (profile?.role === "client") { setShow(false); return; }
     setShow(false);
 
     let timer: ReturnType<typeof setTimeout>;
@@ -33,7 +35,7 @@ export function ProUpgradeModal() {
       });
 
     return () => clearTimeout(timer);
-  }, [user, location.pathname]);
+  }, [user, profile?.role, location.pathname]);
 
   if (!show) return null;
 

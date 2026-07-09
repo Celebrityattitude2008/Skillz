@@ -19,6 +19,9 @@ export interface Gig {
   postedBy?: string;
   deadline?: string;
   status?: 'Open' | 'In Progress' | 'Completed';
+  applyLink?: string;
+  applyWhatsapp?: string;
+  applyEmail?: string;
 }
 
 export interface StudentProfile {

@@ -33,8 +33,14 @@ const Field = ({ label, children, required }: { label: string; children: React.R
 );
 
 export function ProfileEditor() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
+
+  // Clients don't have a student profile to edit — send them to the job board
+  useEffect(() => {
+    if (profile?.role === "client") navigate("/jobs", { replace: true });
+  }, [profile?.role, navigate]);
+
   const [existingId, setExistingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
